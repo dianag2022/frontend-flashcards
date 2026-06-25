@@ -6,6 +6,7 @@ import type {
   Deck,
   DeckListResponse,
   DeckResponse,
+  DraftDeckResponse,
   Flashcard,
   FlashcardListResponse,
   FlashcardResponse,
@@ -14,6 +15,9 @@ import type {
   SignUpBody,
   AdminSetupBody,
   UpdateFlashcardsStatusBody,
+  ForgotPasswordBody,
+  ResetPasswordBody,
+  MessageResponse,
 } from "@/types/api";
 
 class ApiClientError extends Error {
@@ -102,6 +106,20 @@ export const api = {
     );
   },
 
+  forgotPassword(body: ForgotPasswordBody) {
+    return request<MessageResponse>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  resetPassword(body: ResetPasswordBody) {
+    return request<MessageResponse>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
   listPublishedDecks() {
     return request<DeckListResponse>("/api/decks");
   },
@@ -121,6 +139,14 @@ export const api = {
   publishDeck(id: string, token: string) {
     return request<DeckResponse>(
       `/api/admin/decks/${id}/publish`,
+      { method: "PUT" },
+      token,
+    );
+  },
+
+  draftDeck(id: string, token: string) {
+    return request<DraftDeckResponse>(
+      `/api/admin/decks/${id}/draft`,
       { method: "PUT" },
       token,
     );

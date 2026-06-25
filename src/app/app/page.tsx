@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import type { Deck } from "@/types/api";
@@ -37,9 +38,7 @@ function AppContent() {
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
           <Logo size="sm" />
           <div className="flex items-center gap-4">
-            {user && (
-              <span className="hidden text-sm text-muted sm:inline">{user.email}</span>
-            )}
+            {user && <UserMenu email={user.email} profileHref="/app/profile" />}
             <Button variant="ghost" onClick={() => signOut("/login")} className="px-3 py-2">
               <LogOut className="h-4 w-4" />
               Salir

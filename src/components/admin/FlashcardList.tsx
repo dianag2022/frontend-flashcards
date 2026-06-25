@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { EyeOff, Pencil, Trash2, Upload } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import type { Flashcard } from "@/types/api";
 
@@ -41,7 +41,7 @@ export function FlashcardList({
   const allSelected = cards.every((c) => selectedIds.has(c.id));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center gap-3 px-1 text-sm text-muted">
         <label className="flex cursor-pointer items-center gap-2">
           <input
@@ -52,7 +52,9 @@ export function FlashcardList({
           />
           Seleccionar todas
         </label>
-        <span>{selectedIds.size} seleccionada{selectedIds.size === 1 ? "" : "s"}</span>
+        {selectedIds.size > 0 && (
+          <span>{selectedIds.size} seleccionada{selectedIds.size === 1 ? "" : "s"}</span>
+        )}
       </div>
 
       {cards.map((card) => {
@@ -62,59 +64,63 @@ export function FlashcardList({
         return (
           <Card
             key={card.id}
-            className={`p-5 ${selectedIds.has(card.id) ? "ring-2 ring-brand-teal/30" : ""}`}
+            className={`p-4 ${selectedIds.has(card.id) ? "ring-2 ring-brand-teal/30" : ""}`}
           >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-3">
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(card.id)}
                   onChange={() => onToggleSelect(card.id)}
-                  className="h-4 w-4 rounded border-border accent-brand-teal"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-brand-teal"
                 />
-                <StatusBadge status={card.status} />
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <StatusBadge status={card.status} />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">{card.front}</p>
+                  <p className="mt-1 text-sm text-muted">{card.back}</p>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex shrink-0 items-center gap-1">
                 {isDraft ? (
-                  <Button
+                  <IconButton
+                    label="Publicar tarjeta"
                     variant="secondary"
-                    className="px-3 py-2"
                     disabled={isBusy}
+                    loading={isBusy}
                     onClick={() => onPublishCard(card.id)}
                   >
                     <Upload className="h-4 w-4" />
-                    Publicar
-                  </Button>
+                  </IconButton>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    className="px-3 py-2"
+                  <IconButton
+                    label="Pasar a borrador"
                     disabled={isBusy}
+                    loading={isBusy}
                     onClick={() => onDraftCard(card.id)}
                   >
                     <EyeOff className="h-4 w-4" />
-                    Pasar a borrador
-                  </Button>
+                  </IconButton>
                 )}
-                <Link href={`/admin/decks/${deckId}/cards/${card.id}/edit`}>
-                  <Button variant="ghost" className="px-3 py-2">
-                    <Pencil className="h-4 w-4" />
-                    Editar
-                  </Button>
+                <Link
+                  href={`/admin/decks/${deckId}/cards/${card.id}/edit`}
+                  title="Editar tarjeta"
+                  aria-label="Editar tarjeta"
+                  className={iconLinkClass()}
+                >
+                  <Pencil className="h-4 w-4" />
                 </Link>
-                <Button
+                <IconButton
+                  label="Eliminar tarjeta"
                   variant="danger"
-                  className="px-3 py-2"
                   disabled={isBusy}
                   onClick={() => onDelete(card.id)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Eliminar
-                </Button>
+                </IconButton>
               </div>
             </div>
-            <p className="mb-2 text-sm font-semibold text-foreground">{card.front}</p>
-            <p className="text-sm text-muted">{card.back}</p>
           </Card>
         );
       })}

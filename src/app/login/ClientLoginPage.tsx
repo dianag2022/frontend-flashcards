@@ -24,7 +24,7 @@ export default function ClientLoginPage() {
     setLoading(true);
     setError("");
     try {
-      await signIn(email, password);
+      await signIn(email, password, "/app");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Credenciales inválidas.");
     } finally {
@@ -67,14 +67,27 @@ export default function ClientLoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-3.5 w-3.5" />
+                  <EyeOff className="h-3.5 w-3.5 text-brand-teal" />
                 ) : (
-                  <Eye className="h-3.5 w-3.5" />
+                  <Eye className="h-3.5 w-3.5 text-brand-teal" />
                 )}
                 {showPassword ? "Ocultar" : "Mostrar"} contraseña
               </button>
+              <div className="mt-2 text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-[#297197] hover:opacity-80"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {searchParams.get("reset") === "success" && (
+              <p className="text-sm text-brand-teal">
+                Contraseña actualizada. Inicia sesión con tu nueva contraseña.
+              </p>
+            )}
             {searchParams.get("registered") && (
               <p className="text-sm text-brand-teal">
                 Cuenta creada correctamente. Inicia sesión para continuar.

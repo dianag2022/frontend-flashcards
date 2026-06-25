@@ -71,14 +71,27 @@ export default function AdminLoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-3.5 w-3.5" />
+                  <EyeOff className="h-3.5 w-3.5 text-brand-teal" />
                 ) : (
-                  <Eye className="h-3.5 w-3.5" />
+                  <Eye className="h-3.5 w-3.5 text-brand-teal" />
                 )}
                 {showPassword ? "Ocultar" : "Mostrar"} contraseña
               </button>
+              <div className="mt-2 text-right">
+                <Link
+                  href="/forgot-password?from=admin"
+                  className="text-xs font-semibold text-[#297197] hover:opacity-80"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {searchParams.get("reset") === "success" && (
+              <p className="text-sm text-brand-teal">
+                Contraseña actualizada. Inicia sesión con tu nueva contraseña.
+              </p>
+            )}
             {searchParams.get("registered") && (
               <p className="text-sm text-brand-teal">
                 Cuenta creada correctamente. Inicia sesión para continuar.
@@ -93,7 +106,7 @@ export default function AdminLoginPage() {
           </form>
           <p className="mt-6 text-center text-sm text-muted">
             ¿No tienes cuenta?{" "}
-            <Link href="/signup" className="font-semibold text-brand-teal hover:text-brand-blue">
+            <Link href="/signup" className="font-semibold text-[#297197] hover:opacity-80">
               Regístrate
             </Link>
           </p>

@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { ArrowLeft, EyeOff, Pencil, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { FlashcardBulkActions } from "@/components/admin/FlashcardBulkActions";
 import { FlashcardList } from "@/components/admin/FlashcardList";
-import { PublishDeckButton } from "@/components/admin/PublishDeckButton";
+import { PageLoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConfirm } from "@/contexts/ConfirmContext";
 import { api, ApiClientError } from "@/lib/api";
 import { countByStatus, isDraftDeck } from "@/lib/deck-status";
 import { deckStore } from "@/lib/deck-store";
@@ -25,6 +26,7 @@ export default function DeckDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { token } = useAuth();
+  const { confirm } = useConfirm();
   const deckId = params.id;
 
   const [deck, setDeck] = useState<Deck | null>(null);
@@ -32,6 +34,7 @@ export default function DeckDetailPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [publishingDeck, setPublishingDeck] = useState(false);
+  const [draftingDeck, setDraftingDeck] = useState(false);
   const [publishingCards, setPublishingCards] = useState(false);
   const [draftingCards, setDraftingCards] = useState(false);
   const [busyCardId, setBusyCardId] = useState<string | null>(null);
@@ -79,7 +82,12 @@ export default function DeckDetailPage() {
 
   async function handlePublishDeck() {
     if (!token || !deck) return;
-    if (!confirm(`¿Publicar el mazo "${deck.title}" en la app móvil?`)) return;
+    const ok = await confirm({
+      title: "Publicar mazo",
+      message: `¿Publicar el mazo "${deck.title}" en la app móvil?`,
+      confirmLabel: "Publicar",
+    });
+    if (!ok) return;
 
     setPublishingDeck(true);
     setMessage("");
@@ -94,6 +102,37 @@ export default function DeckDetailPage() {
       setMessage(err instanceof Error ? err.message : "Error al publicar el mazo.");
     } finally {
       setPublishingDeck(false);
+    }
+  }
+
+  async function handleDraftDeck() {
+    if (!token || !deck) return;
+    const ok = await confirm({
+      title: "Pasar a borrador",
+      message: `¿Pasar el mazo "${deck.title}" a borrador? Se ocultará de la app móvil y todas sus tarjetas pasarán a borrador.`,
+      confirmLabel: "Pasar a borrador",
+    });
+    if (!ok) return;
+
+    setDraftingDeck(true);
+    setMessage("");
+    try {
+      const { deck: drafted, flashcardsDrafted } = await api.draftDeck(deck.id, token);
+      deckStore.upsertDeck(drafted);
+      setDeck(drafted);
+
+      const remoteCards = await api.listAdminFlashcards(deck.id, token);
+      const merged = deckStore.mergeCards(deck.id, remoteCards);
+      setCards(merged);
+      setSelectedIds(new Set());
+
+      setMessage(
+        `Mazo movido a borrador. ${flashcardsDrafted} tarjeta${flashcardsDrafted === 1 ? "" : "s"} actualizada${flashcardsDrafted === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Error al pasar el mazo a borrador.");
+    } finally {
+      setDraftingDeck(false);
     }
   }
 
@@ -164,7 +203,13 @@ export default function DeckDetailPage() {
 
   async function handleDeleteDeck() {
     if (!token || !deck) return;
-    if (!confirm("¿Eliminar este mazo y todas sus tarjetas?")) return;
+    const ok = await confirm({
+      title: "Eliminar mazo",
+      message: "¿Eliminar este mazo y todas sus tarjetas? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await api.deleteDeck(deck.id, token);
     } catch (err) {
@@ -182,7 +227,13 @@ export default function DeckDetailPage() {
 
   async function handleDeleteCard(cardId: string) {
     if (!token) return;
-    if (!confirm("¿Eliminar esta tarjeta?")) return;
+    const ok = await confirm({
+      title: "Eliminar tarjeta",
+      message: "¿Eliminar esta tarjeta?",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await api.deleteFlashcard(cardId, token);
     } catch (err) {
@@ -201,7 +252,7 @@ export default function DeckDetailPage() {
     });
   }
 
-  if (loading) return <p className="text-muted">Cargando mazo...</p>;
+  if (loading) return <PageLoadingState label="Cargando mazo" />;
   if (!deck) {
     return (
       <div>
@@ -226,83 +277,74 @@ export default function DeckDetailPage() {
         Volver a mazos
       </Link>
 
-      {isDraft && (
-        <PublishDeckButton
-          publishing={publishingDeck}
-          onPublish={handlePublishDeck}
-          cardCount={cards.length}
-        />
-      )}
-
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold">{deck.title}</h1>
+            <h1 className="text-2xl font-bold sm:text-3xl">{deck.title}</h1>
             <StatusBadge status={deck.status} />
           </div>
-          <p className="text-muted">{deck.description}</p>
-          <p className="mt-2 text-sm text-muted">
+          <p className="text-sm text-muted">{deck.description}</p>
+          <p className="mt-1.5 text-xs text-muted">
             {counts.published} publicada{counts.published === 1 ? "" : "s"} ·{" "}
             {counts.draft} borrador{counts.draft === 1 ? "" : "es"}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/admin/decks/${deck.id}/edit`}>
-            <Button variant="secondary">
-              <Pencil className="h-4 w-4" />
-              Editar
-            </Button>
+        <div className="flex items-center gap-1">
+          <Link
+            href={`/admin/decks/${deck.id}/edit`}
+            title="Editar mazo"
+            aria-label="Editar mazo"
+            className={iconLinkClass("secondary")}
+          >
+            <Pencil className="h-4 w-4" />
           </Link>
-          {isDraft && (
-            <PublishDeckButton
-              publishing={publishingDeck}
-              onPublish={handlePublishDeck}
-              cardCount={cards.length}
-              variant="inline"
-            />
+          {isDraft ? (
+            <IconButton
+              label="Publicar mazo"
+              variant="primary"
+              loading={publishingDeck}
+              onClick={handlePublishDeck}
+            >
+              <Upload className="h-4 w-4" />
+            </IconButton>
+          ) : (
+            <IconButton
+              label="Pasar mazo a borrador"
+              variant="secondary"
+              loading={draftingDeck}
+              onClick={handleDraftDeck}
+            >
+              <EyeOff className="h-4 w-4" />
+            </IconButton>
           )}
-          <Button variant="danger" onClick={handleDeleteDeck}>
+          <IconButton label="Eliminar mazo" variant="danger" onClick={handleDeleteDeck}>
             <Trash2 className="h-4 w-4" />
-            Eliminar
-          </Button>
+          </IconButton>
+          <span className="mx-1 h-6 w-px bg-border" aria-hidden />
+          <Link
+            href={`/admin/decks/${deck.id}/cards/new`}
+            title="Nueva tarjeta"
+            aria-label="Nueva tarjeta"
+            className={iconLinkClass("primary")}
+          >
+            <Plus className="h-4 w-4 text-white" />
+          </Link>
+          <Link
+            href={`/admin/decks/${deck.id}/ai`}
+            title="Generar con IA"
+            aria-label="Generar con IA"
+            className={iconLinkClass("secondary")}
+          >
+            <Sparkles className="h-4 w-4" />
+          </Link>
         </div>
       </div>
 
-      <Card className="mb-6 border-border bg-white p-4 text-sm text-muted">
-        {isDraft ? (
-          <>
-            El mazo está en <strong>borrador</strong>. Publica el mazo primero, luego selecciona
-            tarjetas y usa <strong>Publicar seleccionadas</strong> para que aparezcan en la app.
-          </>
-        ) : (
-          <>
-            El mazo está <strong>publicado</strong>. Solo las tarjetas con estado{" "}
-            <strong>Publicado</strong> son visibles en la app móvil. Puedes pasar tarjetas
-            publicadas a borrador sin despublicar el mazo.
-          </>
-        )}
-      </Card>
-
       {message && (
-        <Card className="mb-6 border-brand-teal/20 bg-brand-teal/5 p-4 text-sm">
+        <Card className="mb-4 border-brand-teal/20 bg-brand-teal/5 p-3 text-sm">
           {message}
         </Card>
       )}
-
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Link href={`/admin/decks/${deck.id}/cards/new`}>
-          <Button>
-            <Plus className="h-4 w-4" />
-            Nueva tarjeta
-          </Button>
-        </Link>
-        <Link href={`/admin/decks/${deck.id}/ai`}>
-          <Button variant="secondary">
-            <Sparkles className="h-4 w-4" />
-            Generar con IA
-          </Button>
-        </Link>
-      </div>
 
       <FlashcardBulkActions
         selectedCount={selectedIds.size}

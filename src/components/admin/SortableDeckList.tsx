@@ -22,14 +22,18 @@ interface SortableDeckListProps {
   decks: Deck[];
   onReorder: (orderedIds: string[]) => void;
   onPublish?: (deck: Deck) => void;
+  onDraft?: (deck: Deck) => void;
   publishingId?: string | null;
+  draftingId?: string | null;
 }
 
 export function SortableDeckList({
   decks,
   onReorder,
   onPublish,
+  onDraft,
   publishingId,
+  draftingId,
 }: SortableDeckListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -58,7 +62,9 @@ export function SortableDeckList({
               deck={deck}
               sortable
               onPublish={onPublish}
+              onDraft={onDraft}
               publishingId={publishingId}
+              draftingId={draftingId}
             />
           ))}
         </div>

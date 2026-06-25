@@ -124,7 +124,11 @@ export const deckStore = {
       if (!existing) {
         map.set(card.id, card);
       } else {
-        map.set(card.id, { ...existing, ...card, status: card.status });
+        // API status is source of truth; keep local-only fields like order
+        map.set(card.id, {
+          ...existing,
+          order: existing.order ?? card.order,
+        });
       }
     }
 

@@ -81,9 +81,9 @@ export default function SignUpPage() {
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-3.5 w-3.5" />
+                  <EyeOff className="h-3.5 w-3.5 text-brand-teal" />
                 ) : (
-                  <Eye className="h-3.5 w-3.5" />
+                  <Eye className="h-3.5 w-3.5 text-brand-teal" />
                 )}
                 {showPassword ? "Ocultar" : "Mostrar"} contraseña
               </button>

@@ -12,7 +12,7 @@ export function Input({ label, icon, error, className = "", ...props }: InputPro
       <span className="text-sm font-medium text-foreground">{label}</span>
       <div className="relative">
         {icon && (
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-brand-teal">
             {icon}
           </span>
         )}

@@ -6,6 +6,8 @@ const PUBLIC_PATHS = [
   `${ADMIN_PATH}/login`,
   "/login",
   "/signup",
+  "/forgot-password",
+  "/reset-password",
 ];
 
 function hasSession(request: NextRequest): boolean {

@@ -5,17 +5,21 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SortableDeckList } from "@/components/admin/SortableDeckList";
+import { DeckListSkeleton, PageLoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConfirm } from "@/contexts/ConfirmContext";
 import { api } from "@/lib/api";
 import { deckStore } from "@/lib/deck-store";
 import type { Deck } from "@/types/api";
 
 function DecksPageContent() {
   const { token } = useAuth();
+  const { confirm } = useConfirm();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [draftingId, setDraftingId] = useState<string | null>(null);
   const [publishMessage, setPublishMessage] = useState("");
 
   const loadDecks = useCallback(async () => {
@@ -69,6 +73,31 @@ function DecksPageContent() {
     }
   }
 
+  async function handleDraft(deck: Deck) {
+    if (!token) return;
+    const ok = await confirm({
+      title: "Pasar a borrador",
+      message: `¿Pasar "${deck.title}" a borrador? Se ocultará de la app y todas sus tarjetas pasarán a borrador.`,
+      confirmLabel: "Pasar a borrador",
+    });
+    if (!ok) return;
+
+    setDraftingId(deck.id);
+    setPublishMessage("");
+    try {
+      const { deck: drafted, flashcardsDrafted } = await api.draftDeck(deck.id, token);
+      deckStore.upsertDeck(drafted);
+      setDecks(deckStore.getDecks());
+      setPublishMessage(
+        `"${drafted.title}" movido a borrador (${flashcardsDrafted} tarjeta${flashcardsDrafted === 1 ? "" : "s"}).`,
+      );
+    } catch (err) {
+      setPublishMessage(err instanceof Error ? err.message : "Error al pasar a borrador.");
+    } finally {
+      setDraftingId(null);
+    }
+  }
+
   return (
     <div>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -86,9 +115,9 @@ function DecksPageContent() {
         </Link>
       </div>
 
-      {loading && <p className="text-muted">Cargando mazos...</p>}
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-      {publishMessage && (
+      {loading && <DeckListSkeleton />}
+      {error && !loading && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {publishMessage && !loading && (
         <p className="mb-4 text-sm text-brand-teal">{publishMessage}</p>
       )}
 
@@ -101,12 +130,14 @@ function DecksPageContent() {
         </div>
       )}
 
-      {decks.length > 0 && (
+      {!loading && decks.length > 0 && (
         <SortableDeckList
           decks={decks}
           onReorder={handleReorder}
           onPublish={handlePublish}
+          onDraft={handleDraft}
           publishingId={publishingId}
+          draftingId={draftingId}
         />
       )}
     </div>
@@ -115,7 +146,7 @@ function DecksPageContent() {
 
 export default function AdminDecksPage() {
   return (
-    <Suspense fallback={<p className="text-muted">Cargando...</p>}>
+    <Suspense fallback={<PageLoadingState />}>
       <DecksPageContent />
     </Suspense>
   );

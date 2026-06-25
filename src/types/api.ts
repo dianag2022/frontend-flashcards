@@ -72,12 +72,31 @@ export interface DeckResponse {
   deck: Deck;
 }
 
+export interface DraftDeckResponse {
+  deck: Deck;
+  flashcardsDrafted: number;
+}
+
 export interface FlashcardListResponse {
   flashcards: Flashcard[];
 }
 
 export interface FlashcardResponse {
   flashcard: Flashcard;
+}
+
+export interface MessageResponse {
+  message: string;
+  email?: string;
+}
+
+export interface ForgotPasswordBody {
+  email: string;
+}
+
+export interface ResetPasswordBody {
+  oobCode: string;
+  newPassword: string;
 }
 
 export interface UpdateFlashcardsStatusBody {

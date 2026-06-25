@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, GripVertical, Upload } from "lucide-react";
+import { ChevronRight, EyeOff, GripVertical, Upload } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { isDraftDeck } from "@/lib/deck-status";
 import type { Deck } from "@/types/api";
@@ -21,12 +21,16 @@ function DeckCardContent({
   deck,
   sortable,
   onPublish,
+  onDraft,
   publishingId,
+  draftingId,
 }: {
   deck: Deck;
   sortable?: boolean;
   onPublish?: (deck: Deck) => void;
+  onDraft?: (deck: Deck) => void;
   publishingId?: string | null;
+  draftingId?: string | null;
 }) {
   const sortableHook = useSortable({ id: deck.id, disabled: !sortable });
   const style = sortable
@@ -38,9 +42,10 @@ function DeckCardContent({
 
   const isDraft = isDraftDeck(deck);
   const isPublishing = publishingId === deck.id;
+  const isDrafting = draftingId === deck.id;
 
-  const cardBody = (
-    <Card className="flex items-center gap-4 p-5 transition hover:shadow-md">
+  const card = (
+    <Card className="flex items-center gap-3 p-4 transition hover:shadow-md">
       {sortable && (
         <button
           type="button"
@@ -51,78 +56,82 @@ function DeckCardContent({
           <GripVertical className="h-5 w-5" />
         </button>
       )}
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-teal/10 text-xl">
-        {iconForDeck(deck.id)}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
-          <h3 className="font-semibold text-foreground">{deck.title}</h3>
-          <StatusBadge status={deck.status} />
+      <Link
+        href={`/admin/decks/${deck.id}`}
+        className="flex min-w-0 flex-1 items-center gap-4"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-teal/10 text-lg">
+          {iconForDeck(deck.id)}
         </div>
-        <p className="line-clamp-2 text-sm text-muted">{deck.description}</p>
-        <div className="mt-3 flex items-center gap-3">
-          <div className="h-1.5 max-w-32 flex-1 overflow-hidden rounded-full bg-border">
-            <div
-              className="progress-gradient h-full rounded-full"
-              style={{ width: `${Math.min(deck.cardCount * 10, 100)}%` }}
-            />
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold text-foreground">{deck.title}</h3>
+            <StatusBadge status={deck.status} />
           </div>
-          <span className="text-xs text-muted">
+          <p className="line-clamp-1 text-sm text-muted">{deck.description}</p>
+          <p className="mt-1.5 text-xs text-muted">
             {deck.cardCount} tarjeta{deck.cardCount === 1 ? "" : "s"}
-          </span>
+          </p>
         </div>
-      </div>
-      <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
-    </Card>
-  );
-
-  const wrapper = (
-    <div className="space-y-2">
-      <Link href={`/admin/decks/${deck.id}`}>{cardBody}</Link>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
+      </Link>
       {isDraft && onPublish && (
-        <div className="flex justify-end px-1">
-          <Button
-            variant="secondary"
-            className="px-4 py-2 text-sm"
-            onClick={() => onPublish(deck)}
-            loading={isPublishing}
-          >
-            <Upload className="h-4 w-4" />
-            Publicar mazo
-          </Button>
-        </div>
+        <IconButton
+          label="Publicar mazo"
+          variant="secondary"
+          loading={isPublishing}
+          onClick={() => onPublish(deck)}
+        >
+          <Upload className="h-4 w-4" />
+        </IconButton>
       )}
-    </div>
+      {!isDraft && onDraft && (
+        <IconButton
+          label="Pasar a borrador"
+          variant="secondary"
+          loading={isDrafting}
+          onClick={() => onDraft(deck)}
+        >
+          <EyeOff className="h-4 w-4" />
+        </IconButton>
+      )}
+    </Card>
   );
 
   if (sortable) {
     return (
       <div ref={sortableHook.setNodeRef} style={style}>
-        {wrapper}
+        {card}
       </div>
     );
   }
 
-  return wrapper;
+  return card;
 }
 
 export function DeckCard({
   deck,
   sortable = false,
   onPublish,
+  onDraft,
   publishingId,
+  draftingId,
 }: {
   deck: Deck;
   sortable?: boolean;
   onPublish?: (deck: Deck) => void;
+  onDraft?: (deck: Deck) => void;
   publishingId?: string | null;
+  draftingId?: string | null;
 }) {
   return (
     <DeckCardContent
       deck={deck}
       sortable={sortable}
       onPublish={onPublish}
+      onDraft={onDraft}
       publishingId={publishingId}
+      draftingId={draftingId}
     />
   );
 }

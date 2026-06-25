@@ -5,7 +5,8 @@
   --foreground: #1a1a1a;
   --muted: #757575;
   --card: #ffffff;
-  --brand-teal: #2bb69b;
+  --brand-teal: #2eab95;
+  --brand-link: #297197;
   --brand-blue: #4a86c9;
   --brand-purple: #9b7fd4;
   --border: #e5ebe9;
@@ -17,6 +18,7 @@
   --color-muted: var(--muted);
   --color-card: var(--card);
   --color-brand-teal: var(--brand-teal);
+  --color-brand-link: var(--brand-link);
   --color-brand-blue: var(--brand-blue);
   --color-brand-purple: var(--brand-purple);
   --color-border: var(--border);
@@ -30,7 +32,7 @@ body {
 }
 
 .brand-gradient {
-  background: linear-gradient(90deg, #2bb69b 0%, #4a86c9 100%);
+  background: linear-gradient(90deg, #2eab95 0%, #4a86c9 100%);
 }
 
 .progress-gradient {
@@ -39,4 +41,78 @@ body {
 
 .card-shadow {
   box-shadow: 0 4px 20px rgba(26, 26, 26, 0.06);
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--border) 100%, transparent) 0%,
+    color-mix(in srgb, var(--background) 60%, white) 50%,
+    color-mix(in srgb, var(--border) 100%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.loading-dot {
+  animation: soft-pulse 1.4s ease-in-out infinite;
+}
+
+.loading-dot-delay-1 {
+  animation-delay: 0.2s;
+}
+
+.loading-dot-delay-2 {
+  animation-delay: 0.4s;
+}
+
+@keyframes confirm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirm-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.confirm-overlay {
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  backdrop-filter: blur(4px);
+  animation: confirm-fade-in 0.2s ease-out;
+}
+
+.confirm-panel {
+  animation: confirm-scale-in 0.22s ease-out;
 }

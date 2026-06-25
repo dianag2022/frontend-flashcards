@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Layers, LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/Button";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -32,11 +33,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Layers className="h-4 w-4" />
               Mazos
             </Link>
-            {user && (
-              <span className="hidden text-sm text-muted sm:inline">
-                {user.email}
-              </span>
-            )}
+            {user && <UserMenu email={user.email} profileHref="/admin/profile" />}
             <Button variant="ghost" onClick={() => signOut("/admin/login")} className="px-3 py-2">
               <LogOut className="h-4 w-4" />
               Salir
