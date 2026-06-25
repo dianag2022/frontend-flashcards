@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SortableDeckList } from "@/components/admin/SortableDeckList";
@@ -15,6 +16,7 @@ import type { Deck } from "@/types/api";
 function DecksPageContent() {
   const { token } = useAuth();
   const { confirm } = useConfirm();
+  const searchParams = useSearchParams();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -44,6 +46,13 @@ function DecksPageContent() {
   useEffect(() => {
     loadDecks();
   }, [loadDecks]);
+
+  useEffect(() => {
+    const msg = searchParams.get("msg");
+    if (msg) {
+      setPublishMessage(msg);
+    }
+  }, [searchParams]);
 
   async function handleReorder(orderedIds: string[]) {
     deckStore.reorderDecks(orderedIds);

@@ -7,6 +7,8 @@ import type {
   DeckListResponse,
   DeckResponse,
   DraftDeckResponse,
+  DeleteDeckResponse,
+  DeleteFlashcardResponse,
   Flashcard,
   FlashcardListResponse,
   FlashcardResponse,
@@ -201,22 +203,12 @@ export const api = {
     }
   },
 
-  async deleteDeck(id: string, token: string): Promise<void> {
-    try {
-      await request<void>(
-        `/api/admin/decks/${id}`,
-        { method: "DELETE" },
-        token,
-      );
-    } catch (error) {
-      if (error instanceof ApiClientError && [404, 405].includes(error.status)) {
-        throw new ApiClientError(
-          error.status,
-          "Deck delete is not yet available on the backend. Removed locally.",
-        );
-      }
-      throw error;
-    }
+  deleteDeck(id: string, token: string) {
+    return request<DeleteDeckResponse>(
+      `/api/admin/decks/${id}`,
+      { method: "DELETE" },
+      token,
+    );
   },
 
   async reorderDecks(
@@ -287,22 +279,12 @@ export const api = {
     }
   },
 
-  async deleteFlashcard(id: string, token: string): Promise<void> {
-    try {
-      await request<void>(
-        `/api/admin/flashcards/${id}`,
-        { method: "DELETE" },
-        token,
-      );
-    } catch (error) {
-      if (error instanceof ApiClientError && [404, 405].includes(error.status)) {
-        throw new ApiClientError(
-          error.status,
-          "Flashcard delete is not yet available on the backend. Removed locally.",
-        );
-      }
-      throw error;
-    }
+  deleteFlashcard(id: string, token: string) {
+    return request<DeleteFlashcardResponse>(
+      `/api/admin/flashcards/${id}`,
+      { method: "DELETE" },
+      token,
+    );
   },
 };
 

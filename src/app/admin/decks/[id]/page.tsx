@@ -12,7 +12,7 @@ import { FlashcardList } from "@/components/admin/FlashcardList";
 import { PageLoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
-import { api, ApiClientError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { countByStatus, isDraftDeck } from "@/lib/deck-status";
 import { deckStore } from "@/lib/deck-store";
 import type { Deck, Flashcard } from "@/types/api";
@@ -35,6 +35,7 @@ export default function DeckDetailPage() {
   const [loading, setLoading] = useState(true);
   const [publishingDeck, setPublishingDeck] = useState(false);
   const [draftingDeck, setDraftingDeck] = useState(false);
+  const [deletingDeck, setDeletingDeck] = useState(false);
   const [publishingCards, setPublishingCards] = useState(false);
   const [draftingCards, setDraftingCards] = useState(false);
   const [busyCardId, setBusyCardId] = useState<string | null>(null);
@@ -210,23 +211,22 @@ export default function DeckDetailPage() {
       tone: "danger",
     });
     if (!ok) return;
+
+    setDeletingDeck(true);
+    setMessage("");
     try {
-      await api.deleteDeck(deck.id, token);
+      const { message } = await api.deleteDeck(deck.id, token);
+      deckStore.removeDeck(deck.id);
+      router.push(`/admin?msg=${encodeURIComponent(message)}`);
     } catch (err) {
-      if (err instanceof ApiClientError && [404, 405].includes(err.status)) {
-        deckStore.removeDeck(deck.id);
-        router.push("/admin");
-        return;
-      }
-      setMessage(err instanceof Error ? err.message : "Error al eliminar.");
-      return;
+      setMessage(err instanceof Error ? err.message : "Error al eliminar el mazo.");
+    } finally {
+      setDeletingDeck(false);
     }
-    deckStore.removeDeck(deck.id);
-    router.push("/admin");
   }
 
   async function handleDeleteCard(cardId: string) {
-    if (!token) return;
+    if (!token || !deck) return;
     const ok = await confirm({
       title: "Eliminar tarjeta",
       message: "¿Eliminar esta tarjeta?",
@@ -234,22 +234,26 @@ export default function DeckDetailPage() {
       tone: "danger",
     });
     if (!ok) return;
+
+    setBusyCardId(cardId);
+    setMessage("");
     try {
-      await api.deleteFlashcard(cardId, token);
+      const { message } = await api.deleteFlashcard(cardId, token);
+      deckStore.removeCard(cardId);
+      deckStore.updateDeckCardCount(deck.id);
+      setDeck(deckStore.getDecks().find((d) => d.id === deck.id) ?? deck);
+      setCards(deckStore.getCardsByDeck(deckId));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(cardId);
+        return next;
+      });
+      setMessage(message);
     } catch (err) {
-      if (!(err instanceof ApiClientError && [404, 405].includes(err.status))) {
-        setMessage(err instanceof Error ? err.message : "Error al eliminar tarjeta.");
-        return;
-      }
+      setMessage(err instanceof Error ? err.message : "Error al eliminar tarjeta.");
+    } finally {
+      setBusyCardId(null);
     }
-    deckStore.removeCard(cardId);
-    if (deck) deckStore.updateDeckCardCount(deck.id);
-    setCards(deckStore.getCardsByDeck(deckId));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(cardId);
-      return next;
-    });
   }
 
   if (loading) return <PageLoadingState label="Cargando mazo" />;
@@ -317,7 +321,12 @@ export default function DeckDetailPage() {
               <EyeOff className="h-4 w-4" />
             </IconButton>
           )}
-          <IconButton label="Eliminar mazo" variant="danger" onClick={handleDeleteDeck}>
+          <IconButton
+            label="Eliminar mazo"
+            variant="danger"
+            loading={deletingDeck}
+            onClick={handleDeleteDeck}
+          >
             <Trash2 className="h-4 w-4" />
           </IconButton>
           <span className="mx-1 h-6 w-px bg-border" aria-hidden />

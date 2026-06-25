@@ -77,6 +77,17 @@ export interface DraftDeckResponse {
   flashcardsDrafted: number;
 }
 
+export interface DeleteDeckResponse {
+  message: string;
+  deckId: string;
+  flashcardsDeleted: number;
+}
+
+export interface DeleteFlashcardResponse {
+  message: string;
+  flashcardId: string;
+}
+
 export interface FlashcardListResponse {
   flashcards: Flashcard[];
 }
