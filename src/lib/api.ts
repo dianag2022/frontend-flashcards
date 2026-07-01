@@ -1,8 +1,14 @@
 import { API_BASE_URL } from "./constants";
+import { refreshAuthToken } from "./auth-token";
+import { isAuthTokenError } from "./session";
 import type {
   ApiError,
   CreateDeckBody,
+  CreateCategoryBody,
   CreateFlashcardBody,
+  Category,
+  CategoryListResponse,
+  CategoryResponse,
   Deck,
   DeckListResponse,
   DeckResponse,
@@ -12,6 +18,7 @@ import type {
   Flashcard,
   FlashcardListResponse,
   FlashcardResponse,
+  ContentStatus,
   SignInBody,
   SignInResponse,
   SignUpBody,
@@ -20,6 +27,7 @@ import type {
   ForgotPasswordBody,
   ResetPasswordBody,
   MessageResponse,
+  RefreshTokenBody,
 } from "@/types/api";
 
 class ApiClientError extends Error {
@@ -45,6 +53,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {},
   token?: string | null,
+  retried = false,
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -61,7 +70,25 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    throw new ApiClientError(response.status, await parseError(response));
+    const message = await parseError(response);
+
+    if (
+      response.status === 401 &&
+      token &&
+      !retried &&
+      isAuthTokenError(message)
+    ) {
+      const newToken = await refreshAuthToken();
+      if (newToken) {
+        return request<T>(path, options, newToken, true);
+      }
+      throw new ApiClientError(
+        401,
+        "No se pudo renovar la sesión. Espera un momento e intenta de nuevo.",
+      );
+    }
+
+    throw new ApiClientError(response.status, message);
   }
 
   if (response.status === 204) {
@@ -108,6 +135,13 @@ export const api = {
     );
   },
 
+  refreshToken(body: RefreshTokenBody) {
+    return request<SignInResponse>("/api/auth/refresh-token", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
   forgotPassword(body: ForgotPasswordBody) {
     return request<MessageResponse>("/api/auth/forgot-password", {
       method: "POST",
@@ -128,6 +162,16 @@ export const api = {
 
   listPublishedFlashcards(deckId: string) {
     return request<FlashcardListResponse>(`/api/decks/${deckId}/flashcards`);
+  },
+
+  listPublishedCategories(deckId: string) {
+    return request<CategoryListResponse>(`/api/decks/${deckId}/categories`);
+  },
+
+  listPublishedFlashcardsByCategory(deckId: string, categoryId: string) {
+    return request<FlashcardListResponse>(
+      `/api/decks/${deckId}/categories/${categoryId}/flashcards`,
+    );
   },
 
   createDeck(body: CreateDeckBody, token: string) {
@@ -162,22 +206,52 @@ export const api = {
     );
   },
 
-  // Extended admin endpoints — gracefully handled when backend adds them
-  async listAdminDecks(token: string): Promise<Deck[]> {
-    try {
-      const data = await request<{ decks: Deck[] }>(
-        "/api/admin/decks",
-        {},
-        token,
-      );
-      return data.decks;
-    } catch (error) {
-      if (error instanceof ApiClientError && error.status === 404) {
-        const published = await api.listPublishedDecks();
-        return published.decks;
-      }
-      throw error;
+  listAdminCategories(deckId: string, token: string) {
+    return request<CategoryListResponse>(
+      `/api/admin/decks/${deckId}/categories`,
+      {},
+      token,
+    );
+  },
+
+  createCategory(deckId: string, body: CreateCategoryBody, token: string) {
+    return request<CategoryResponse>(
+      `/api/admin/decks/${deckId}/categories`,
+      { method: "POST", body: JSON.stringify(body) },
+      token,
+    );
+  },
+
+  async listAdminDecks(token: string, status?: ContentStatus): Promise<Deck[]> {
+    const query = status ? `?status=${status}` : "";
+    const data = await request<DeckListResponse>(
+      `/api/admin/decks${query}`,
+      {},
+      token,
+    );
+    return data.decks;
+  },
+
+  async getAdminDeck(id: string, token: string): Promise<Deck> {
+    const decks = await api.listAdminDecks(token);
+    const deck = decks.find((d) => d.id === id);
+    if (!deck) {
+      throw new ApiClientError(404, "Deck no encontrado.");
     }
+    return deck;
+  },
+
+  async getAdminFlashcard(
+    deckId: string,
+    cardId: string,
+    token: string,
+  ): Promise<Flashcard> {
+    const flashcards = await api.listAdminFlashcards(deckId, token);
+    const card = flashcards.find((c) => c.id === cardId);
+    if (!card) {
+      throw new ApiClientError(404, "Tarjeta no encontrada.");
+    }
+    return card;
   },
 
   async updateDeck(
@@ -185,22 +259,12 @@ export const api = {
     body: Partial<CreateDeckBody>,
     token: string,
   ): Promise<Deck> {
-    try {
-      const data = await request<DeckResponse>(
-        `/api/admin/decks/${id}`,
-        { method: "PUT", body: JSON.stringify(body) },
-        token,
-      );
-      return data.deck;
-    } catch (error) {
-      if (error instanceof ApiClientError && [404, 405].includes(error.status)) {
-        throw new ApiClientError(
-          error.status,
-          "Deck update is not yet available on the backend. Changes saved locally.",
-        );
-      }
-      throw error;
-    }
+    const data = await request<DeckResponse>(
+      `/api/admin/decks/${id}`,
+      { method: "PUT", body: JSON.stringify(body) },
+      token,
+    );
+    return data.deck;
   },
 
   deleteDeck(id: string, token: string) {
@@ -261,22 +325,12 @@ export const api = {
     body: Partial<CreateFlashcardBody>,
     token: string,
   ): Promise<Flashcard> {
-    try {
-      const data = await request<FlashcardResponse>(
-        `/api/admin/flashcards/${id}`,
-        { method: "PUT", body: JSON.stringify(body) },
-        token,
-      );
-      return data.flashcard;
-    } catch (error) {
-      if (error instanceof ApiClientError && [404, 405].includes(error.status)) {
-        throw new ApiClientError(
-          error.status,
-          "Flashcard update is not yet available on the backend. Changes saved locally.",
-        );
-      }
-      throw error;
-    }
+    const data = await request<FlashcardResponse>(
+      `/api/admin/flashcards/${id}`,
+      { method: "PUT", body: JSON.stringify(body) },
+      token,
+    );
+    return data.flashcard;
   },
 
   deleteFlashcard(id: string, token: string) {

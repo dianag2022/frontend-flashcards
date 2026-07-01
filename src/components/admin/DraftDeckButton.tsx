@@ -32,13 +32,13 @@ export function DraftDeckButton({
             Ocultar de la app móvil
           </p>
           <p className="mt-1 text-sm text-muted">
-            Pasa el mazo completo a borrador. Todas las tarjetas dejarán de ser
+            Pasa el Deck completo a borrador. Todas las tarjetas dejarán de ser
             visibles en la app.
           </p>
         </div>
         <Button variant="secondary" onClick={onDraft} loading={drafting} className="shrink-0">
           <EyeOff className="h-4 w-4" />
-          Pasar mazo a borrador
+          Pasar Deck a borrador
         </Button>
       </div>
     </Card>

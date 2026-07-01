@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { EyeOff, Pencil, Trash2, Upload } from "lucide-react";
+import { Eye, EyeOff, Pencil, Trash2, Upload } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -17,6 +17,7 @@ interface FlashcardListProps {
   onDraftCard: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   busyId?: string | null;
+  emptyMessage?: string;
 }
 
 export function FlashcardList({
@@ -29,11 +30,12 @@ export function FlashcardList({
   onDraftCard,
   onDelete,
   busyId,
+  emptyMessage = "No hay tarjetas en este Deck. Crea una manualmente o usa la generación con IA.",
 }: FlashcardListProps) {
   if (cards.length === 0) {
     return (
       <Card className="p-8 text-center text-muted">
-        No hay tarjetas en este mazo. Crea una manualmente o usa la generación con IA.
+        {emptyMessage}
       </Card>
     );
   }
@@ -83,6 +85,14 @@ export function FlashcardList({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                <Link
+                  href={`/admin/decks/${deckId}/preview?card=${card.id}`}
+                  title="Vista previa"
+                  aria-label="Vista previa"
+                  className={iconLinkClass()}
+                >
+                  <Eye className="h-4 w-4" />
+                </Link>
                 {isDraft ? (
                   <IconButton
                     label="Publicar tarjeta"

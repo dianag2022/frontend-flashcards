@@ -21,7 +21,7 @@ export function PublishDeckButton({
     return (
       <Button onClick={onPublish} loading={publishing}>
         <Upload className="h-4 w-4" />
-        Publicar mazo
+        Publicar Deck
       </Button>
     );
   }
@@ -34,12 +34,12 @@ export function PublishDeckButton({
             Publicar en la app móvil
           </p>
           <p className="mt-1 text-sm text-muted">
-            Publica el mazo en la app. Luego publica tarjetas individualmente o en lote.
+            Publica el Deck en la app. Luego publica tarjetas individualmente o en lote.
           </p>
         </div>
         <Button onClick={onPublish} loading={publishing} className="shrink-0">
           <Upload className="h-4 w-4" />
-          Publicar mazo
+          Publicar Deck
         </Button>
       </div>
     </Card>

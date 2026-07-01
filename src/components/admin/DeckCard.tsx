@@ -77,7 +77,7 @@ function DeckCardContent({
       </Link>
       {isDraft && onPublish && (
         <IconButton
-          label="Publicar mazo"
+          label="Publicar Deck"
           variant="secondary"
           loading={isPublishing}
           onClick={() => onPublish(deck)}

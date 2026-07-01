@@ -40,7 +40,7 @@ export function DeckListSkeleton({ count = 3 }: { count?: number }) {
     <div
       className="space-y-4"
       role="status"
-      aria-label="Cargando mazos"
+      aria-label="Cargando Decks"
     >
       {Array.from({ length: count }, (_, i) => (
         <DeckCardSkeleton key={i} />

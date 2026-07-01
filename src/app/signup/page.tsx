@@ -50,7 +50,7 @@ export default function SignUpPage() {
         <Card className="p-8">
           <h2 className="mb-2 text-lg font-semibold">Crear cuenta de administrador</h2>
           <p className="mb-6 text-sm text-muted">
-            Se creará una cuenta con permisos para gestionar mazos y flashcards.
+            Se creará una cuenta con permisos para gestionar Decks y flashcards.
           </p>
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input

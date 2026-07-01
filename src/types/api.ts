@@ -10,9 +10,21 @@ export interface Deck {
   order?: number;
 }
 
+export interface Category {
+  id: string;
+  deckId: string;
+  title: string;
+  description: string;
+  status: ContentStatus;
+  cardCount: number;
+  updatedAt: string;
+  order?: number;
+}
+
 export interface Flashcard {
   id: string;
   deckId: string;
+  categoryId: string;
   front: string;
   back: string;
   status: ContentStatus;
@@ -25,8 +37,14 @@ export interface CreateDeckBody {
   description: string;
 }
 
+export interface CreateCategoryBody {
+  title: string;
+  description: string;
+}
+
 export interface CreateFlashcardBody {
   deckId: string;
+  categoryId: string;
   front: string;
   back: string;
 }
@@ -53,6 +71,10 @@ export interface SignInResponse {
   role: "admin" | "end-user" | null;
 }
 
+export interface RefreshTokenBody {
+  refreshToken: string;
+}
+
 export interface ApiError {
   error: string;
   message: string;
@@ -74,13 +96,23 @@ export interface DeckResponse {
 
 export interface DraftDeckResponse {
   deck: Deck;
+  categoriesDrafted: number;
   flashcardsDrafted: number;
 }
 
 export interface DeleteDeckResponse {
   message: string;
   deckId: string;
+  categoriesDeleted: number;
   flashcardsDeleted: number;
+}
+
+export interface CategoryListResponse {
+  categories: Category[];
+}
+
+export interface CategoryResponse {
+  category: Category;
 }
 
 export interface DeleteFlashcardResponse {
@@ -112,4 +144,8 @@ export interface ResetPasswordBody {
 
 export interface UpdateFlashcardsStatusBody {
   flashcardIds: string[];
+}
+
+export interface UpdateCategoriesStatusBody {
+  categoryIds: string[];
 }

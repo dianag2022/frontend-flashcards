@@ -10,7 +10,6 @@ import { DeckListSkeleton, PageLoadingState } from "@/components/ui/LoadingState
 import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { api } from "@/lib/api";
-import { deckStore } from "@/lib/deck-store";
 import type { Deck } from "@/types/api";
 
 function DecksPageContent() {
@@ -30,14 +29,10 @@ function DecksPageContent() {
     setError("");
     try {
       const remote = await api.listAdminDecks(token);
-      const merged = deckStore.mergeDecks(remote);
-      setDecks(merged);
+      setDecks(remote);
     } catch (err) {
-      const local = deckStore.getDecks();
-      setDecks(local);
-      if (local.length === 0) {
-        setError(err instanceof Error ? err.message : "Error al cargar mazos.");
-      }
+      setError(err instanceof Error ? err.message : "Error al cargar decks.");
+      setDecks([]);
     } finally {
       setLoading(false);
     }
@@ -55,14 +50,17 @@ function DecksPageContent() {
   }, [searchParams]);
 
   async function handleReorder(orderedIds: string[]) {
-    deckStore.reorderDecks(orderedIds);
-    setDecks(deckStore.getDecks());
-    if (token) {
-      try {
-        await api.reorderDecks(orderedIds, token);
-      } catch {
-        // order saved locally
-      }
+    const map = new Map(decks.map((d) => [d.id, d]));
+    const reordered = orderedIds
+      .map((id) => map.get(id))
+      .filter(Boolean) as Deck[];
+    setDecks(reordered);
+
+    if (!token) return;
+    try {
+      await api.reorderDecks(orderedIds, token);
+    } catch {
+      await loadDecks();
     }
   }
 
@@ -72,8 +70,7 @@ function DecksPageContent() {
     setPublishMessage("");
     try {
       const { deck: published } = await api.publishDeck(deck.id, token);
-      deckStore.upsertDeck(published);
-      setDecks(deckStore.getDecks());
+      setDecks((prev) => prev.map((d) => (d.id === published.id ? published : d)));
       setPublishMessage(`"${published.title}" publicado correctamente.`);
     } catch (err) {
       setPublishMessage(err instanceof Error ? err.message : "Error al publicar.");
@@ -94,11 +91,11 @@ function DecksPageContent() {
     setDraftingId(deck.id);
     setPublishMessage("");
     try {
-      const { deck: drafted, flashcardsDrafted } = await api.draftDeck(deck.id, token);
-      deckStore.upsertDeck(drafted);
-      setDecks(deckStore.getDecks());
+      const { deck: drafted, categoriesDrafted, flashcardsDrafted } =
+        await api.draftDeck(deck.id, token);
+      setDecks((prev) => prev.map((d) => (d.id === drafted.id ? drafted : d)));
       setPublishMessage(
-        `"${drafted.title}" movido a borrador (${flashcardsDrafted} tarjeta${flashcardsDrafted === 1 ? "" : "s"}).`,
+        `"${drafted.title}" movido a borrador (${categoriesDrafted} categoría${categoriesDrafted === 1 ? "" : "s"}, ${flashcardsDrafted} tarjeta${flashcardsDrafted === 1 ? "" : "s"}).`,
       );
     } catch (err) {
       setPublishMessage(err instanceof Error ? err.message : "Error al pasar a borrador.");
@@ -119,7 +116,7 @@ function DecksPageContent() {
         <Link href="/admin/decks/new">
           <Button>
             <Plus className="h-4 w-4" />
-            Nuevo mazo
+            Nuevo Deck
           </Button>
         </Link>
       </div>
@@ -130,11 +127,11 @@ function DecksPageContent() {
         <p className="mb-4 text-sm text-brand-teal">{publishMessage}</p>
       )}
 
-      {!loading && decks.length === 0 && (
+      {!loading && decks.length === 0 && !error && (
         <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
-          <p className="text-muted">Aún no hay mazos. Crea el primero.</p>
+          <p className="text-muted">Aún no hay Decks. Crea el primero.</p>
           <Link href="/admin/decks/new" className="mt-4 inline-block">
-            <Button>Crear mazo</Button>
+            <Button>Crear Deck</Button>
           </Link>
         </div>
       )}

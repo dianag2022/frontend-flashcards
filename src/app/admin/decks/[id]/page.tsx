@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, EyeOff, Pencil, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, FolderPlus, Pencil, Trash2, Upload } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { CategorySection } from "@/components/admin/CategorySection";
 import { FlashcardBulkActions } from "@/components/admin/FlashcardBulkActions";
 import { FlashcardList } from "@/components/admin/FlashcardList";
 import { PageLoadingState } from "@/components/ui/LoadingState";
@@ -14,8 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { api } from "@/lib/api";
 import { countByStatus, isDraftDeck } from "@/lib/deck-status";
-import { deckStore } from "@/lib/deck-store";
-import type { Deck, Flashcard } from "@/types/api";
+import type { Category, Deck, Flashcard } from "@/types/api";
 
 function applyCardUpdates(cards: Flashcard[], updated: Flashcard[]): Flashcard[] {
   const map = new Map(updated.map((c) => [c.id, c]));
@@ -30,6 +31,7 @@ export default function DeckDetailPage() {
   const deckId = params.id;
 
   const [deck, setDeck] = useState<Deck | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -44,28 +46,21 @@ export default function DeckDetailPage() {
   const loadData = useCallback(async () => {
     if (!token || !deckId) return;
     setLoading(true);
+    setMessage("");
     try {
-      let localDeck = deckStore.getDecks().find((d) => d.id === deckId) ?? null;
-
-      if (!localDeck) {
-        try {
-          const remote = await api.listAdminDecks(token);
-          deckStore.mergeDecks(remote);
-          localDeck = deckStore.getDecks().find((d) => d.id === deckId) ?? null;
-        } catch {
-          const published = await api.listPublishedDecks();
-          deckStore.mergeDecks(published.decks);
-          localDeck = deckStore.getDecks().find((d) => d.id === deckId) ?? null;
-        }
-      }
-
-      setDeck(localDeck);
-
-      const remoteCards = await api.listAdminFlashcards(deckId, token);
-      const merged = deckStore.mergeCards(deckId, remoteCards);
-      setCards(merged);
+      const [deckData, categoriesRes, remoteCards] = await Promise.all([
+        api.getAdminDeck(deckId, token),
+        api.listAdminCategories(deckId, token),
+        api.listAdminFlashcards(deckId, token),
+      ]);
+      setDeck(deckData);
+      setCategories(categoriesRes.categories);
+      setCards(remoteCards);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Error al cargar el mazo.");
+      setMessage(err instanceof Error ? err.message : "Error al cargar el deck.");
+      setDeck(null);
+      setCategories([]);
+      setCards([]);
     } finally {
       setLoading(false);
     }
@@ -75,17 +70,11 @@ export default function DeckDetailPage() {
     loadData();
   }, [loadData]);
 
-  function syncCards(updated: Flashcard[]) {
-    updated.forEach((c) => deckStore.upsertCard(c));
-    setCards((prev) => applyCardUpdates(prev, updated));
-    setSelectedIds(new Set());
-  }
-
   async function handlePublishDeck() {
     if (!token || !deck) return;
     const ok = await confirm({
-      title: "Publicar mazo",
-      message: `¿Publicar el mazo "${deck.title}" en la app móvil?`,
+      title: "Publicar deck",
+      message: `¿Publicar el deck "${deck.title}" en la app móvil?`,
       confirmLabel: "Publicar",
     });
     if (!ok) return;
@@ -94,13 +83,12 @@ export default function DeckDetailPage() {
     setMessage("");
     try {
       const { deck: published } = await api.publishDeck(deck.id, token);
-      deckStore.upsertDeck(published);
       setDeck(published);
       setMessage(
-        "Mazo publicado. Publica las tarjetas seleccionadas para que aparezcan en la app.",
+        "Deck publicado. Publica las tarjetas seleccionadas para que aparezcan en la app.",
       );
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Error al publicar el mazo.");
+      setMessage(err instanceof Error ? err.message : "Error al publicar el deck.");
     } finally {
       setPublishingDeck(false);
     }
@@ -110,7 +98,7 @@ export default function DeckDetailPage() {
     if (!token || !deck) return;
     const ok = await confirm({
       title: "Pasar a borrador",
-      message: `¿Pasar el mazo "${deck.title}" a borrador? Se ocultará de la app móvil y todas sus tarjetas pasarán a borrador.`,
+      message: `¿Pasar el deck "${deck.title}" a borrador? Se ocultará de la app móvil y todas sus categorías y tarjetas pasarán a borrador.`,
       confirmLabel: "Pasar a borrador",
     });
     if (!ok) return;
@@ -118,20 +106,23 @@ export default function DeckDetailPage() {
     setDraftingDeck(true);
     setMessage("");
     try {
-      const { deck: drafted, flashcardsDrafted } = await api.draftDeck(deck.id, token);
-      deckStore.upsertDeck(drafted);
+      const { deck: drafted, categoriesDrafted, flashcardsDrafted } =
+        await api.draftDeck(deck.id, token);
       setDeck(drafted);
 
-      const remoteCards = await api.listAdminFlashcards(deck.id, token);
-      const merged = deckStore.mergeCards(deck.id, remoteCards);
-      setCards(merged);
+      const [categoriesRes, remoteCards] = await Promise.all([
+        api.listAdminCategories(deck.id, token),
+        api.listAdminFlashcards(deck.id, token),
+      ]);
+      setCategories(categoriesRes.categories);
+      setCards(remoteCards);
       setSelectedIds(new Set());
 
       setMessage(
-        `Mazo movido a borrador. ${flashcardsDrafted} tarjeta${flashcardsDrafted === 1 ? "" : "s"} actualizada${flashcardsDrafted === 1 ? "" : "s"}.`,
+        `Deck movido a borrador. ${categoriesDrafted} categoría${categoriesDrafted === 1 ? "" : "s"} y ${flashcardsDrafted} tarjeta${flashcardsDrafted === 1 ? "" : "s"} actualizada${flashcardsDrafted === 1 ? "" : "s"}.`,
       );
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Error al pasar el mazo a borrador.");
+      setMessage(err instanceof Error ? err.message : "Error al pasar el deck a borrador.");
     } finally {
       setDraftingDeck(false);
     }
@@ -144,7 +135,8 @@ export default function DeckDetailPage() {
     setMessage("");
     try {
       const { flashcards } = await api.publishFlashcards(deck.id, ids, token);
-      syncCards(flashcards);
+      setCards((prev) => applyCardUpdates(prev, flashcards));
+      setSelectedIds(new Set());
       setMessage(
         `${flashcards.length} tarjeta${flashcards.length === 1 ? "" : "s"} publicada${flashcards.length === 1 ? "" : "s"}.`,
       );
@@ -163,7 +155,8 @@ export default function DeckDetailPage() {
     setMessage("");
     try {
       const { flashcards } = await api.draftFlashcards(deck.id, ids, token);
-      syncCards(flashcards);
+      setCards((prev) => applyCardUpdates(prev, flashcards));
+      setSelectedIds(new Set());
       setMessage(
         `${flashcards.length} tarjeta${flashcards.length === 1 ? "" : "s"} movida${flashcards.length === 1 ? "" : "s"} a borrador.`,
       );
@@ -194,19 +187,27 @@ export default function DeckDetailPage() {
     });
   }
 
-  function handleToggleSelectAll() {
-    if (cards.every((c) => selectedIds.has(c.id))) {
-      setSelectedIds(new Set());
+  function handleToggleSelectAllInCategory(categoryCards: Flashcard[]) {
+    if (categoryCards.every((c) => selectedIds.has(c.id))) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        categoryCards.forEach((c) => next.delete(c.id));
+        return next;
+      });
     } else {
-      setSelectedIds(new Set(cards.map((c) => c.id)));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        categoryCards.forEach((c) => next.add(c.id));
+        return next;
+      });
     }
   }
 
   async function handleDeleteDeck() {
     if (!token || !deck) return;
     const ok = await confirm({
-      title: "Eliminar mazo",
-      message: "¿Eliminar este mazo y todas sus tarjetas? Esta acción no se puede deshacer.",
+      title: "Eliminar deck",
+      message: "¿Eliminar este deck, sus categorías y tarjetas? Esta acción no se puede deshacer.",
       confirmLabel: "Eliminar",
       tone: "danger",
     });
@@ -216,10 +217,9 @@ export default function DeckDetailPage() {
     setMessage("");
     try {
       const { message } = await api.deleteDeck(deck.id, token);
-      deckStore.removeDeck(deck.id);
       router.push(`/admin?msg=${encodeURIComponent(message)}`);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Error al eliminar el mazo.");
+      setMessage(err instanceof Error ? err.message : "Error al eliminar el deck.");
     } finally {
       setDeletingDeck(false);
     }
@@ -239,15 +239,16 @@ export default function DeckDetailPage() {
     setMessage("");
     try {
       const { message } = await api.deleteFlashcard(cardId, token);
-      deckStore.removeCard(cardId);
-      deckStore.updateDeckCardCount(deck.id);
-      setDeck(deckStore.getDecks().find((d) => d.id === deck.id) ?? deck);
-      setCards(deckStore.getCardsByDeck(deckId));
+      setCards((prev) => prev.filter((c) => c.id !== cardId));
       setSelectedIds((prev) => {
         const next = new Set(prev);
         next.delete(cardId);
         return next;
       });
+      const categoriesRes = await api.listAdminCategories(deckId, token);
+      setCategories(categoriesRes.categories);
+      const deckData = await api.getAdminDeck(deck.id, token);
+      setDeck(deckData);
       setMessage(message);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Error al eliminar tarjeta.");
@@ -256,13 +257,13 @@ export default function DeckDetailPage() {
     }
   }
 
-  if (loading) return <PageLoadingState label="Cargando mazo" />;
+  if (loading) return <PageLoadingState label="Cargando deck" />;
   if (!deck) {
     return (
       <div>
-        <p className="text-muted">Mazo no encontrado.</p>
+        <p className="text-muted">{message || "Deck no encontrado."}</p>
         <Link href="/admin" className="mt-4 inline-block text-brand-teal">
-          Volver a mazos
+          Volver a decks
         </Link>
       </div>
     );
@@ -270,6 +271,9 @@ export default function DeckDetailPage() {
 
   const isDraft = isDraftDeck(deck);
   const counts = countByStatus(cards);
+  const uncategorizedCards = cards.filter(
+    (c) => !categories.some((cat) => cat.id === c.categoryId),
+  );
 
   return (
     <div>
@@ -278,7 +282,7 @@ export default function DeckDetailPage() {
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Volver a mazos
+        Volver a decks
       </Link>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -289,22 +293,30 @@ export default function DeckDetailPage() {
           </div>
           <p className="text-sm text-muted">{deck.description}</p>
           <p className="mt-1.5 text-xs text-muted">
-            {counts.published} publicada{counts.published === 1 ? "" : "s"} ·{" "}
-            {counts.draft} borrador{counts.draft === 1 ? "" : "es"}
+            {categories.length} categoría{categories.length === 1 ? "" : "s"} ·{" "}
+            {counts.published} tarjeta{counts.published === 1 ? "" : "s"} publicada
+            {counts.published === 1 ? "" : "s"} · {counts.draft} borrador
+            {counts.draft === 1 ? "" : "es"}
           </p>
         </div>
         <div className="flex items-center gap-1">
+          <Link href={`/admin/decks/${deck.id}/categories/new`}>
+            <Button className="px-3 py-2">
+              <FolderPlus className="h-4 w-4" />
+              Categoría
+            </Button>
+          </Link>
           <Link
             href={`/admin/decks/${deck.id}/edit`}
-            title="Editar mazo"
-            aria-label="Editar mazo"
+            title="Editar deck"
+            aria-label="Editar deck"
             className={iconLinkClass("secondary")}
           >
             <Pencil className="h-4 w-4" />
           </Link>
           {isDraft ? (
             <IconButton
-              label="Publicar mazo"
+              label="Publicar deck"
               variant="primary"
               loading={publishingDeck}
               onClick={handlePublishDeck}
@@ -313,7 +325,7 @@ export default function DeckDetailPage() {
             </IconButton>
           ) : (
             <IconButton
-              label="Pasar mazo a borrador"
+              label="Pasar deck a borrador"
               variant="secondary"
               loading={draftingDeck}
               onClick={handleDraftDeck}
@@ -322,7 +334,7 @@ export default function DeckDetailPage() {
             </IconButton>
           )}
           <IconButton
-            label="Eliminar mazo"
+            label="Eliminar deck"
             variant="danger"
             loading={deletingDeck}
             onClick={handleDeleteDeck}
@@ -331,20 +343,12 @@ export default function DeckDetailPage() {
           </IconButton>
           <span className="mx-1 h-6 w-px bg-border" aria-hidden />
           <Link
-            href={`/admin/decks/${deck.id}/cards/new`}
-            title="Nueva tarjeta"
-            aria-label="Nueva tarjeta"
-            className={iconLinkClass("primary")}
-          >
-            <Plus className="h-4 w-4 text-white" />
-          </Link>
-          <Link
-            href={`/admin/decks/${deck.id}/ai`}
-            title="Generar con IA"
-            aria-label="Generar con IA"
+            href={`/admin/decks/${deck.id}/preview`}
+            title="Vista previa"
+            aria-label="Vista previa"
             className={iconLinkClass("secondary")}
           >
-            <Sparkles className="h-4 w-4" />
+            <Eye className="h-4 w-4" />
           </Link>
         </div>
       </div>
@@ -364,17 +368,58 @@ export default function DeckDetailPage() {
         onClearSelection={() => setSelectedIds(new Set())}
       />
 
-      <FlashcardList
-        cards={cards}
-        deckId={deck.id}
-        selectedIds={selectedIds}
-        onToggleSelect={handleToggleSelect}
-        onToggleSelectAll={handleToggleSelectAll}
-        onPublishCard={handlePublishCard}
-        onDraftCard={handleDraftCard}
-        onDelete={handleDeleteCard}
-        busyId={busyCardId}
-      />
+      {categories.length === 0 && (
+        <Card className="mb-6 p-8 text-center">
+          <p className="text-muted">
+            Crea una categoría antes de añadir tarjetas. Las categorías organizan el
+            contenido dentro del deck.
+          </p>
+          <Link href={`/admin/decks/${deck.id}/categories/new`} className="mt-4 inline-block">
+            <Button>
+              <FolderPlus className="h-4 w-4" />
+              Crear primera categoría
+            </Button>
+          </Link>
+        </Card>
+      )}
+
+      <div className="space-y-8">
+        {categories.map((category) => {
+          const categoryCards = cards.filter((c) => c.categoryId === category.id);
+          return (
+            <CategorySection
+              key={category.id}
+              category={category}
+              deckId={deck.id}
+              cards={categoryCards}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={() => handleToggleSelectAllInCategory(categoryCards)}
+              onPublishCard={handlePublishCard}
+              onDraftCard={handleDraftCard}
+              onDelete={handleDeleteCard}
+              busyId={busyCardId}
+            />
+          );
+        })}
+
+        {uncategorizedCards.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-muted">Sin categoría</h2>
+            <FlashcardList
+              cards={uncategorizedCards}
+              deckId={deck.id}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={() => handleToggleSelectAllInCategory(uncategorizedCards)}
+              onPublishCard={handlePublishCard}
+              onDraftCard={handleDraftCard}
+              onDelete={handleDeleteCard}
+              busyId={busyCardId}
+            />
+          </section>
+        )}
+      </div>
     </div>
   );
 }

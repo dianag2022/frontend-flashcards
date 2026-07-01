@@ -31,7 +31,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-2 text-sm font-medium text-muted hover:text-foreground"
             >
               <Layers className="h-4 w-4" />
-              Mazos
+              Decks
             </Link>
             {user && <UserMenu email={user.email} profileHref="/admin/profile" />}
             <Button variant="ghost" onClick={() => signOut("/admin/login")} className="px-3 py-2">

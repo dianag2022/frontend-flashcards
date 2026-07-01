@@ -5,24 +5,24 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 
-interface DeckFormData {
+export interface CategoryFormData {
   title: string;
   description: string;
 }
 
-interface DeckFormProps {
-  initial?: DeckFormData;
+interface CategoryFormProps {
+  initial?: CategoryFormData;
   submitLabel: string;
-  onSubmit: (data: DeckFormData) => Promise<void>;
+  onSubmit: (data: CategoryFormData) => Promise<void>;
   onCancel?: () => void;
 }
 
-export function DeckForm({
+export function CategoryForm({
   initial = { title: "", description: "" },
   submitLabel,
   onSubmit,
   onCancel,
-}: DeckFormProps) {
+}: CategoryFormProps) {
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,7 @@ export function DeckForm({
     try {
       await onSubmit({ title: title.trim(), description: description.trim() });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar el Deck.");
+      setError(err instanceof Error ? err.message : "Error al guardar la categoría.");
     } finally {
       setLoading(false);
     }
@@ -48,17 +48,17 @@ export function DeckForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <Input
-        label="Título del Deck"
+        label="Título de la categoría"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Ej. Teorías psicológicas"
+        placeholder="Ej. Memoria, Atención, Aprendizaje"
         required
       />
       <Textarea
         label="Descripción"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Freud, Skinner, Piaget..."
+        placeholder="Breve descripción del tema..."
         required
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
