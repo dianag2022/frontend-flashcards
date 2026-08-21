@@ -44,6 +44,9 @@ export default function DeckDetailPage() {
   const [draftingCards, setDraftingCards] = useState(false);
   const [busyCardId, setBusyCardId] = useState<string | null>(null);
   const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
+  const [categoryBusyKind, setCategoryBusyKind] = useState<
+    "delete" | "publish" | "draft" | null
+  >(null);
   const [message, setMessage] = useState("");
 
   const loadData = useCallback(async () => {
@@ -246,6 +249,7 @@ export default function DeckDetailPage() {
     if (!ok) return;
 
     setBusyCategoryId(categoryId);
+    setCategoryBusyKind("delete");
     setMessage("");
     try {
       const { flashcardsDeleted } = await api.deleteCategory(
@@ -274,6 +278,102 @@ export default function DeckDetailPage() {
       setMessage(err instanceof Error ? err.message : "Error al eliminar la categoría.");
     } finally {
       setBusyCategoryId(null);
+      setCategoryBusyKind(null);
+    }
+  }
+
+  async function handlePublishCategory(categoryId: string) {
+    if (!token || !deck) return;
+    const category = categories.find((c) => c.id === categoryId);
+    const title = category?.title ?? "esta categoría";
+    const deckNote = isDraftDeck(deck)
+      ? " El deck sigue en borrador, así que no se verá en la app hasta que lo publiques."
+      : "";
+    const ok = await confirm({
+      title: "Publicar categoría",
+      message: `¿Publicar la categoría "${title}"?${deckNote}`,
+      confirmLabel: "Publicar",
+    });
+    if (!ok) return;
+
+    setBusyCategoryId(categoryId);
+    setCategoryBusyKind("publish");
+    setMessage("");
+    try {
+      const result = await api.publishCategory(deck.id, categoryId, token);
+      if (result.category) {
+        setCategories((prev) =>
+          prev.map((c) => (c.id === result.category.id ? result.category : c)),
+        );
+      } else {
+        const categoriesRes = await api.listAdminCategories(deck.id, token);
+        setCategories(categoriesRes.categories);
+      }
+      if (result.flashcards?.length) {
+        setCards((prev) => applyCardUpdates(prev, result.flashcards ?? []));
+      } else {
+        const remoteCards = await api.listAdminFlashcards(deck.id, token);
+        setCards(remoteCards);
+      }
+      const publishedTitle = result.category?.title ?? title;
+      const count = result.flashcardsPublished ?? result.flashcards?.length;
+      setMessage(
+        count != null
+          ? `Categoría "${publishedTitle}" publicada. ${count} tarjeta${count === 1 ? "" : "s"} actualizada${count === 1 ? "" : "s"}.`
+          : `Categoría "${publishedTitle}" publicada.`,
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Error al publicar la categoría.");
+    } finally {
+      setBusyCategoryId(null);
+      setCategoryBusyKind(null);
+    }
+  }
+
+  async function handleDraftCategory(categoryId: string) {
+    if (!token || !deck) return;
+    const category = categories.find((c) => c.id === categoryId);
+    const title = category?.title ?? "esta categoría";
+    const ok = await confirm({
+      title: "Pasar categoría a borrador",
+      message: `¿Pasar la categoría "${title}" a borrador? Se ocultará de la app móvil.`,
+      confirmLabel: "Pasar a borrador",
+    });
+    if (!ok) return;
+
+    setBusyCategoryId(categoryId);
+    setCategoryBusyKind("draft");
+    setMessage("");
+    try {
+      const result = await api.draftCategory(deck.id, categoryId, token);
+      if (result.category) {
+        setCategories((prev) =>
+          prev.map((c) => (c.id === result.category.id ? result.category : c)),
+        );
+      } else {
+        const categoriesRes = await api.listAdminCategories(deck.id, token);
+        setCategories(categoriesRes.categories);
+      }
+      if (result.flashcards?.length) {
+        setCards((prev) => applyCardUpdates(prev, result.flashcards ?? []));
+      } else {
+        const remoteCards = await api.listAdminFlashcards(deck.id, token);
+        setCards(remoteCards);
+      }
+      const draftedTitle = result.category?.title ?? title;
+      const count = result.flashcardsDrafted ?? result.flashcards?.length;
+      setMessage(
+        count != null
+          ? `Categoría "${draftedTitle}" movida a borrador. ${count} tarjeta${count === 1 ? "" : "s"} actualizada${count === 1 ? "" : "s"}.`
+          : `Categoría "${draftedTitle}" movida a borrador.`,
+      );
+    } catch (err) {
+      setMessage(
+        err instanceof Error ? err.message : "Error al pasar la categoría a borrador.",
+      );
+    } finally {
+      setBusyCategoryId(null);
+      setCategoryBusyKind(null);
     }
   }
 
@@ -474,8 +574,12 @@ export default function DeckDetailPage() {
               onDraftCard={handleDraftCard}
               onDelete={handleDeleteCard}
               onDeleteCategory={handleDeleteCategory}
+              onPublishCategory={handlePublishCategory}
+              onDraftCategory={handleDraftCategory}
               busyId={busyCardId}
-              deleting={busyCategoryId === category.id}
+              deleting={busyCategoryId === category.id && categoryBusyKind === "delete"}
+              publishing={busyCategoryId === category.id && categoryBusyKind === "publish"}
+              drafting={busyCategoryId === category.id && categoryBusyKind === "draft"}
             />
           );
         })}

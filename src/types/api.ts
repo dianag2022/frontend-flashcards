@@ -115,6 +115,13 @@ export interface CategoryResponse {
   category: Category;
 }
 
+export interface CategoryStatusResponse {
+  category: Category;
+  flashcards?: Flashcard[];
+  flashcardsPublished?: number;
+  flashcardsDrafted?: number;
+}
+
 export interface DeleteCategoryResponse {
   message: string;
   categoryId: string;

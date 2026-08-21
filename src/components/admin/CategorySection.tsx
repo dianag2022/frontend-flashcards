@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { FolderOpen, Plus, Sparkles, Trash2 } from "lucide-react";
+import { EyeOff, FolderOpen, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { FlashcardList } from "@/components/admin/FlashcardList";
-import { countByStatus } from "@/lib/deck-status";
+import { countByStatus, isDraftStatus } from "@/lib/deck-status";
 import type { Category, Flashcard } from "@/types/api";
 
 const CATEGORY_ACCENTS = [
@@ -47,8 +47,12 @@ interface CategorySectionProps {
   onDraftCard: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onDeleteCategory: (id: string) => Promise<void>;
+  onPublishCategory: (id: string) => Promise<void>;
+  onDraftCategory: (id: string) => Promise<void>;
   busyId?: string | null;
   deleting?: boolean;
+  publishing?: boolean;
+  drafting?: boolean;
 }
 
 export function CategorySection({
@@ -62,11 +66,17 @@ export function CategorySection({
   onDraftCard,
   onDelete,
   onDeleteCategory,
+  onPublishCategory,
+  onDraftCategory,
   busyId,
   deleting,
+  publishing,
+  drafting,
 }: CategorySectionProps) {
   const counts = countByStatus(cards);
   const accent = accentFor(category.id);
+  const isDraft = isDraftStatus(category.status);
+  const categoryBusy = Boolean(deleting || publishing || drafting);
 
   return (
     <section
@@ -107,10 +117,31 @@ export function CategorySection({
             >
               <Sparkles className="h-4 w-4" />
             </Link>
+            {isDraft ? (
+              <IconButton
+                label="Publicar categoría"
+                variant="secondary"
+                loading={publishing}
+                disabled={categoryBusy}
+                onClick={() => onPublishCategory(category.id)}
+              >
+                <Upload className="h-4 w-4" />
+              </IconButton>
+            ) : (
+              <IconButton
+                label="Pasar categoría a borrador"
+                loading={drafting}
+                disabled={categoryBusy}
+                onClick={() => onDraftCategory(category.id)}
+              >
+                <EyeOff className="h-4 w-4" />
+              </IconButton>
+            )}
             <IconButton
               label="Eliminar categoría"
               variant="danger"
               loading={deleting}
+              disabled={categoryBusy}
               onClick={() => onDeleteCategory(category.id)}
             >
               <Trash2 className="h-4 w-4" />

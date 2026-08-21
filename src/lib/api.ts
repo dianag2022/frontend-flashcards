@@ -9,6 +9,7 @@ import type {
   Category,
   CategoryListResponse,
   CategoryResponse,
+  CategoryStatusResponse,
   Deck,
   DeckListResponse,
   DeckResponse,
@@ -227,6 +228,22 @@ export const api = {
     return request<DeleteCategoryResponse>(
       `/api/admin/decks/${deckId}/categories/${categoryId}`,
       { method: "DELETE" },
+      token,
+    );
+  },
+
+  publishCategory(deckId: string, categoryId: string, token: string) {
+    return request<CategoryStatusResponse>(
+      `/api/admin/decks/${deckId}/categories/${categoryId}/publish`,
+      { method: "PUT" },
+      token,
+    );
+  },
+
+  draftCategory(deckId: string, categoryId: string, token: string) {
+    return request<CategoryStatusResponse>(
+      `/api/admin/decks/${deckId}/categories/${categoryId}/draft`,
+      { method: "PUT" },
       token,
     );
   },
