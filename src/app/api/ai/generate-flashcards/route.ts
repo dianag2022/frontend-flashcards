@@ -158,9 +158,6 @@ export async function POST(request: Request) {
   }
 
   const requestedCount = detectRequestedCount(text);
-
-  // Si el texto ya trae pares explícitos "Frente:/Reverso:", los usamos
-  // directamente — determinístico, no depende de que la IA los "entienda".
   const explicitPairs = extractExplicitPairs(text);
 
   let cards: DraftFlashcardPair[];
@@ -171,16 +168,14 @@ export async function POST(request: Request) {
     cards = await generateWithOpenAI(text, requestedCount);
 
     if (cards.length === 0) {
-      console.warn("Fallback heurístico activado — revisar por qué falló OpenAI");
-      cards = splitIntoParagraphs(text).flatMap(extractDefinitionPairs);
+      return NextResponse.json(
+        {
+          error:
+            "No se pudo generar contenido con IA en este momento. Intenta de nuevo en unos minutos, o usa el formato 'Frente:/Reverso:' para crear tarjetas directamente.",
+        },
+        { status: 502 },
+      );
     }
-  }
-
-  if (cards.length === 0) {
-    return NextResponse.json(
-      { error: "No se pudieron generar tarjetas. Intenta con más texto estructurado." },
-      { status: 422 },
-    );
   }
 
   return NextResponse.json({ cards });
