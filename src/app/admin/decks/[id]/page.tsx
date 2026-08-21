@@ -41,6 +41,7 @@ export default function DeckDetailPage() {
   const [publishingCards, setPublishingCards] = useState(false);
   const [draftingCards, setDraftingCards] = useState(false);
   const [busyCardId, setBusyCardId] = useState<string | null>(null);
+  const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   const loadData = useCallback(async () => {
@@ -225,6 +226,55 @@ export default function DeckDetailPage() {
     }
   }
 
+  async function handleDeleteCategory(categoryId: string) {
+    if (!token || !deck) return;
+    const category = categories.find((c) => c.id === categoryId);
+    const cardCount = cards.filter((c) => c.categoryId === categoryId).length;
+    const title = category?.title ?? "esta categoría";
+    const cardClause =
+      cardCount === 0
+        ? ""
+        : ` y ${cardCount} ${cardCount === 1 ? "tarjeta" : "tarjetas"}`;
+    const ok = await confirm({
+      title: "Eliminar categoría",
+      message: `¿Eliminar la categoría "${title}"${cardClause}? Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
+
+    setBusyCategoryId(categoryId);
+    setMessage("");
+    try {
+      const { flashcardsDeleted } = await api.deleteCategory(
+        deck.id,
+        categoryId,
+        token,
+      );
+      setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+      setCards((prev) => prev.filter((c) => c.categoryId !== categoryId));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        cards.forEach((c) => {
+          if (c.categoryId === categoryId) next.delete(c.id);
+        });
+        return next;
+      });
+      setDeck((prev) =>
+        prev
+          ? { ...prev, cardCount: Math.max(0, prev.cardCount - flashcardsDeleted) }
+          : prev,
+      );
+      setMessage(
+        `Categoría eliminada. ${flashcardsDeleted} tarjeta${flashcardsDeleted === 1 ? "" : "s"} eliminada${flashcardsDeleted === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Error al eliminar la categoría.");
+    } finally {
+      setBusyCategoryId(null);
+    }
+  }
+
   async function handleDeleteCard(cardId: string) {
     if (!token || !deck) return;
     const ok = await confirm({
@@ -398,7 +448,9 @@ export default function DeckDetailPage() {
               onPublishCard={handlePublishCard}
               onDraftCard={handleDraftCard}
               onDelete={handleDeleteCard}
+              onDeleteCategory={handleDeleteCategory}
               busyId={busyCardId}
+              deleting={busyCategoryId === category.id}
             />
           );
         })}

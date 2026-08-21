@@ -14,6 +14,7 @@ import type {
   DeckResponse,
   DraftDeckResponse,
   DeleteDeckResponse,
+  DeleteCategoryResponse,
   DeleteFlashcardResponse,
   Flashcard,
   FlashcardListResponse,
@@ -218,6 +219,14 @@ export const api = {
     return request<CategoryResponse>(
       `/api/admin/decks/${deckId}/categories`,
       { method: "POST", body: JSON.stringify(body) },
+      token,
+    );
+  },
+
+  deleteCategory(deckId: string, categoryId: string, token: string) {
+    return request<DeleteCategoryResponse>(
+      `/api/admin/decks/${deckId}/categories/${categoryId}`,
+      { method: "DELETE" },
       token,
     );
   },

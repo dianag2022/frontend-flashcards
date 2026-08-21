@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { iconLinkClass } from "@/components/ui/IconButton";
+import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { FlashcardList } from "@/components/admin/FlashcardList";
 import { countByStatus } from "@/lib/deck-status";
@@ -19,7 +19,9 @@ interface CategorySectionProps {
   onPublishCard: (id: string) => Promise<void>;
   onDraftCard: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onDeleteCategory: (id: string) => Promise<void>;
   busyId?: string | null;
+  deleting?: boolean;
 }
 
 export function CategorySection({
@@ -32,7 +34,9 @@ export function CategorySection({
   onPublishCard,
   onDraftCard,
   onDelete,
+  onDeleteCategory,
   busyId,
+  deleting,
 }: CategorySectionProps) {
   const counts = countByStatus(cards);
 
@@ -68,6 +72,14 @@ export function CategorySection({
             >
               <Sparkles className="h-4 w-4" />
             </Link>
+            <IconButton
+              label="Eliminar categoría"
+              variant="danger"
+              loading={deleting}
+              onClick={() => onDeleteCategory(category.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </IconButton>
           </div>
         </div>
       </Card>
