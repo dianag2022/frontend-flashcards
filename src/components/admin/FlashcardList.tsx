@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, EyeOff, Pencil, Trash2, Upload } from "lucide-react";
+import { Eye, EyeOff, Pencil, Tag, Trash2, Upload } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -18,6 +18,9 @@ interface FlashcardListProps {
   onDelete: (id: string) => Promise<void>;
   busyId?: string | null;
   emptyMessage?: string;
+  nested?: boolean;
+  categoryLabel?: string;
+  categoryChipClass?: string;
 }
 
 export function FlashcardList({
@@ -31,8 +34,19 @@ export function FlashcardList({
   onDelete,
   busyId,
   emptyMessage = "No hay tarjetas en este Deck. Crea una manualmente o usa la generación con IA.",
+  nested = false,
+  categoryLabel,
+  categoryChipClass = "bg-brand-teal/10 text-brand-teal",
 }: FlashcardListProps) {
   if (cards.length === 0) {
+    if (nested) {
+      return (
+        <div className="rounded-xl border border-dashed border-border bg-white/70 px-4 py-8 text-center text-sm text-muted">
+          {emptyMessage}
+        </div>
+      );
+    }
+
     return (
       <Card className="p-8 text-center text-muted">
         {emptyMessage}
@@ -41,9 +55,10 @@ export function FlashcardList({
   }
 
   const allSelected = cards.every((c) => selectedIds.has(c.id));
+  const selectedInList = cards.filter((c) => selectedIds.has(c.id)).length;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div className="flex items-center gap-3 px-1 text-sm text-muted">
         <label className="flex cursor-pointer items-center gap-2">
           <input
@@ -52,10 +67,12 @@ export function FlashcardList({
             onChange={onToggleSelectAll}
             className="h-4 w-4 rounded border-border accent-brand-teal"
           />
-          Seleccionar todas
+          {nested ? "Seleccionar en esta categoría" : "Seleccionar todas"}
         </label>
-        {selectedIds.size > 0 && (
-          <span>{selectedIds.size} seleccionada{selectedIds.size === 1 ? "" : "s"}</span>
+        {selectedInList > 0 && (
+          <span>
+            {selectedInList} seleccionada{selectedInList === 1 ? "" : "s"}
+          </span>
         )}
       </div>
 
@@ -64,20 +81,32 @@ export function FlashcardList({
         const isDraft = card.status !== "published";
 
         return (
-          <Card
+          <div
             key={card.id}
-            className={`p-4 ${selectedIds.has(card.id) ? "ring-2 ring-brand-teal/30" : ""}`}
+            className={`rounded-xl border bg-white p-4 ${
+              selectedIds.has(card.id)
+                ? "border-brand-teal/40 ring-2 ring-brand-teal/20"
+                : "border-border"
+            }`}
           >
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(card.id)}
                   onChange={() => onToggleSelect(card.id)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-brand-teal"
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-border accent-brand-teal"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    {categoryLabel && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${categoryChipClass}`}
+                      >
+                        <Tag className="h-3 w-3" />
+                        {categoryLabel}
+                      </span>
+                    )}
                     <StatusBadge status={card.status} />
                   </div>
                   <p className="text-sm font-semibold text-foreground">{card.front}</p>
@@ -131,7 +160,7 @@ export function FlashcardList({
                 </IconButton>
               </div>
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>

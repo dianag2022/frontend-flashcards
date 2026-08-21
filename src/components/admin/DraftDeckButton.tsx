@@ -17,7 +17,7 @@ export function DraftDeckButton({
 }: DraftDeckButtonProps) {
   if (variant === "inline") {
     return (
-      <Button variant="secondary" onClick={onDraft} loading={drafting}>
+      <Button variant="secondary" onClick={onDraft} loading={drafting} className="px-3 py-2">
         <EyeOff className="h-4 w-4" />
         Pasar a borrador
       </Button>

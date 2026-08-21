@@ -1,13 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Sparkles, Trash2 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { FolderOpen, Plus, Sparkles, Trash2 } from "lucide-react";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { FlashcardList } from "@/components/admin/FlashcardList";
 import { countByStatus } from "@/lib/deck-status";
 import type { Category, Flashcard } from "@/types/api";
+
+const CATEGORY_ACCENTS = [
+  {
+    bar: "border-l-brand-teal",
+    chip: "bg-brand-teal/10 text-brand-teal",
+    header: "from-brand-teal/10 to-transparent",
+  },
+  {
+    bar: "border-l-brand-blue",
+    chip: "bg-brand-blue/10 text-brand-blue",
+    header: "from-brand-blue/10 to-transparent",
+  },
+  {
+    bar: "border-l-brand-purple",
+    chip: "bg-brand-purple/10 text-brand-purple",
+    header: "from-brand-purple/10 to-transparent",
+  },
+  {
+    bar: "border-l-brand-link",
+    chip: "bg-brand-link/10 text-brand-link",
+    header: "from-brand-link/10 to-transparent",
+  },
+] as const;
+
+function accentFor(id: string) {
+  const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return CATEGORY_ACCENTS[index % CATEGORY_ACCENTS.length];
+}
 
 interface CategorySectionProps {
   category: Category;
@@ -39,18 +66,26 @@ export function CategorySection({
   deleting,
 }: CategorySectionProps) {
   const counts = countByStatus(cards);
+  const accent = accentFor(category.id);
 
   return (
-    <section className="space-y-3">
-      <Card className="p-4">
+    <section
+      id={`category-${category.id}`}
+      className={`scroll-mt-6 overflow-hidden rounded-2xl border border-border bg-card card-shadow border-l-4 ${accent.bar}`}
+    >
+      <div className={`bg-gradient-to-r ${accent.header} p-4 sm:p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-2">
+              <FolderOpen className="h-5 w-5 shrink-0 text-muted" />
               <h2 className="text-lg font-semibold">{category.title}</h2>
               <StatusBadge status={category.status} />
             </div>
-            <p className="text-sm text-muted">{category.description}</p>
+            {category.description && (
+              <p className="text-sm text-muted">{category.description}</p>
+            )}
             <p className="mt-1.5 text-xs text-muted">
+              {counts.total} tarjeta{counts.total === 1 ? "" : "s"} ·{" "}
               {counts.published} publicada{counts.published === 1 ? "" : "s"} ·{" "}
               {counts.draft} borrador{counts.draft === 1 ? "" : "es"}
             </p>
@@ -82,20 +117,25 @@ export function CategorySection({
             </IconButton>
           </div>
         </div>
-      </Card>
+      </div>
 
-      <FlashcardList
-        cards={cards}
-        deckId={deckId}
-        selectedIds={selectedIds}
-        onToggleSelect={onToggleSelect}
-        onToggleSelectAll={onToggleSelectAll}
-        onPublishCard={onPublishCard}
-        onDraftCard={onDraftCard}
-        onDelete={onDelete}
-        busyId={busyId}
-        emptyMessage="No hay tarjetas en esta categoría."
-      />
+      <div className="border-t border-border bg-background/70 p-3 sm:p-4">
+        <FlashcardList
+          cards={cards}
+          deckId={deckId}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
+          onToggleSelectAll={onToggleSelectAll}
+          onPublishCard={onPublishCard}
+          onDraftCard={onDraftCard}
+          onDelete={onDelete}
+          busyId={busyId}
+          nested
+          categoryLabel={category.title}
+          categoryChipClass={accent.chip}
+          emptyMessage="No hay tarjetas en esta categoría."
+        />
+      </div>
     </section>
   );
 }

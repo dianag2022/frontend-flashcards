@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Eye, EyeOff, FolderPlus, Pencil, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Eye, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
@@ -11,6 +11,8 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import { CategorySection } from "@/components/admin/CategorySection";
 import { FlashcardBulkActions } from "@/components/admin/FlashcardBulkActions";
 import { FlashcardList } from "@/components/admin/FlashcardList";
+import { PublishDeckButton } from "@/components/admin/PublishDeckButton";
+import { DraftDeckButton } from "@/components/admin/DraftDeckButton";
 import { PageLoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
@@ -349,7 +351,7 @@ export default function DeckDetailPage() {
             {counts.draft === 1 ? "" : "es"}
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <Link href={`/admin/decks/${deck.id}/categories/new`}>
             <Button className="px-3 py-2">
               <FolderPlus className="h-4 w-4" />
@@ -365,23 +367,18 @@ export default function DeckDetailPage() {
             <Pencil className="h-4 w-4" />
           </Link>
           {isDraft ? (
-            <IconButton
-              label="Publicar deck"
-              variant="primary"
-              loading={publishingDeck}
-              onClick={handlePublishDeck}
-            >
-              <Upload className="h-4 w-4" />
-            </IconButton>
+            <PublishDeckButton
+              variant="inline"
+              publishing={publishingDeck}
+              onPublish={handlePublishDeck}
+              cardCount={cards.length}
+            />
           ) : (
-            <IconButton
-              label="Pasar deck a borrador"
-              variant="secondary"
-              loading={draftingDeck}
-              onClick={handleDraftDeck}
-            >
-              <EyeOff className="h-4 w-4" />
-            </IconButton>
+            <DraftDeckButton
+              variant="inline"
+              drafting={draftingDeck}
+              onDraft={handleDraftDeck}
+            />
           )}
           <IconButton
             label="Eliminar deck"
@@ -403,10 +400,38 @@ export default function DeckDetailPage() {
         </div>
       </div>
 
+      {isDraft && (
+        <PublishDeckButton
+          publishing={publishingDeck}
+          onPublish={handlePublishDeck}
+          cardCount={cards.length}
+        />
+      )}
+
       {message && (
         <Card className="mb-4 border-brand-teal/20 bg-brand-teal/5 p-3 text-sm">
           {message}
         </Card>
+      )}
+
+      {categories.length > 1 && (
+        <nav className="mb-4 flex flex-wrap gap-2" aria-label="Categorías del deck">
+          {categories.map((category) => {
+            const count = cards.filter((c) => c.categoryId === category.id).length;
+            return (
+              <a
+                key={category.id}
+                href={`#category-${category.id}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-muted transition hover:border-brand-teal/40 hover:text-foreground"
+              >
+                {category.title}
+                <span className="rounded-full bg-background px-1.5 py-0.5 text-[10px] text-muted">
+                  {count}
+                </span>
+              </a>
+            );
+          })}
+        </nav>
       )}
 
       <FlashcardBulkActions
@@ -433,7 +458,7 @@ export default function DeckDetailPage() {
         </Card>
       )}
 
-      <div className="space-y-8">
+      <div className="space-y-5">
         {categories.map((category) => {
           const categoryCards = cards.filter((c) => c.categoryId === category.id);
           return (
@@ -456,19 +481,32 @@ export default function DeckDetailPage() {
         })}
 
         {uncategorizedCards.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-muted">Sin categoría</h2>
-            <FlashcardList
-              cards={uncategorizedCards}
-              deckId={deck.id}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onToggleSelectAll={() => handleToggleSelectAllInCategory(uncategorizedCards)}
-              onPublishCard={handlePublishCard}
-              onDraftCard={handleDraftCard}
-              onDelete={handleDeleteCard}
-              busyId={busyCardId}
-            />
+          <section
+            id="category-uncategorized"
+            className="overflow-hidden rounded-2xl border border-dashed border-border bg-card card-shadow"
+          >
+            <div className="p-4 sm:p-5">
+              <h2 className="text-lg font-semibold text-muted">Sin categoría</h2>
+              <p className="mt-1 text-sm text-muted">
+                Estas tarjetas no pertenecen a ninguna categoría del deck.
+              </p>
+            </div>
+            <div className="border-t border-border bg-background/70 p-3 sm:p-4">
+              <FlashcardList
+                cards={uncategorizedCards}
+                deckId={deck.id}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
+                onToggleSelectAll={() => handleToggleSelectAllInCategory(uncategorizedCards)}
+                onPublishCard={handlePublishCard}
+                onDraftCard={handleDraftCard}
+                onDelete={handleDeleteCard}
+                busyId={busyCardId}
+                nested
+                categoryLabel="Sin categoría"
+                categoryChipClass="bg-amber-50 text-amber-700"
+              />
+            </div>
           </section>
         )}
       </div>

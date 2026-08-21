@@ -19,7 +19,7 @@ export function PublishDeckButton({
 }: PublishDeckButtonProps) {
   if (variant === "inline") {
     return (
-      <Button onClick={onPublish} loading={publishing}>
+      <Button onClick={onPublish} loading={publishing} className="px-3 py-2">
         <Upload className="h-4 w-4" />
         Publicar Deck
       </Button>
@@ -34,7 +34,9 @@ export function PublishDeckButton({
             Publicar en la app móvil
           </p>
           <p className="mt-1 text-sm text-muted">
-            Publica el Deck en la app. Luego publica tarjetas individualmente o en lote.
+            {cardCount > 0
+              ? `Este deck tiene ${cardCount} tarjeta${cardCount === 1 ? "" : "s"}. Al publicarlo, aparecerá en la app; publica las tarjetas que quieras mostrar.`
+              : "Publica el deck para que aparezca en la app móvil. Luego publica las tarjetas."}
           </p>
         </div>
         <Button onClick={onPublish} loading={publishing} className="shrink-0">
