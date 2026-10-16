@@ -38,7 +38,7 @@ export default function EditDeckPage() {
     loadDeck();
   }, [loadDeck]);
 
-  async function handleUpdate(data: { title: string; description: string }) {
+  async function handleUpdate(data: { title: string; description: string; emoji: string }) {
     if (!token || !deck) throw new Error("Deck no encontrado.");
     await api.updateDeck(deck.id, data, token);
     router.push(`/admin/decks/${deck.id}`);
@@ -69,7 +69,11 @@ export default function EditDeckPage() {
       <h1 className="mb-6 text-2xl font-bold">Editar deck</h1>
       <Card className="p-6">
         <DeckForm
-          initial={{ title: deck.title, description: deck.description }}
+          initial={{
+            title: deck.title,
+            description: deck.description,
+            emoji: deck.emoji,
+          }}
           submitLabel="Guardar cambios"
           onSubmit={handleUpdate}
           onCancel={() => router.push(`/admin/decks/${deck.id}`)}

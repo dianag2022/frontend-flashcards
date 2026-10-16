@@ -8,14 +8,8 @@ import { Card } from "@/components/ui/Card";
 import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { isDraftDeck } from "@/lib/deck-status";
+import { deckEmoji } from "@/lib/deck-emojis";
 import type { Deck } from "@/types/api";
-
-const ICONS = ["🧠", "💡", "📚", "🎯", "🔬", "🧩"];
-
-function iconForDeck(id: string) {
-  const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return ICONS[index % ICONS.length];
-}
 
 function DeckCardContent({
   deck,
@@ -61,7 +55,7 @@ function DeckCardContent({
         className="flex min-w-0 flex-1 items-center gap-4"
       >
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-teal/10 text-lg">
-          {iconForDeck(deck.id)}
+          {deckEmoji(deck)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">

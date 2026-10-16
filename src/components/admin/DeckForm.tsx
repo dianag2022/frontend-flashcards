@@ -4,27 +4,35 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { EmojiPicker } from "@/components/admin/EmojiPicker";
+import { DEFAULT_DECK_EMOJI, isAllowedDeckEmoji } from "@/lib/deck-emojis";
 
 interface DeckFormData {
   title: string;
   description: string;
+  emoji: string;
 }
 
 interface DeckFormProps {
-  initial?: DeckFormData;
+  initial?: Partial<DeckFormData>;
   submitLabel: string;
   onSubmit: (data: DeckFormData) => Promise<void>;
   onCancel?: () => void;
 }
 
 export function DeckForm({
-  initial = { title: "", description: "" },
+  initial,
   submitLabel,
   onSubmit,
   onCancel,
 }: DeckFormProps) {
-  const [title, setTitle] = useState(initial.title);
-  const [description, setDescription] = useState(initial.description);
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [emoji, setEmoji] = useState(
+    initial?.emoji && isAllowedDeckEmoji(initial.emoji)
+      ? initial.emoji
+      : DEFAULT_DECK_EMOJI,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,7 +45,11 @@ export function DeckForm({
     setLoading(true);
     setError("");
     try {
-      await onSubmit({ title: title.trim(), description: description.trim() });
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim(),
+        emoji,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar el Deck.");
     } finally {
@@ -61,6 +73,7 @@ export function DeckForm({
         placeholder="Freud, Skinner, Piaget..."
         required
       />
+      <EmojiPicker value={emoji} onChange={setEmoji} />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-3">
         <Button type="submit" loading={loading}>

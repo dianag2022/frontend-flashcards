@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { api } from "@/lib/api";
 import { countByStatus, isDraftDeck } from "@/lib/deck-status";
+import { deckEmoji } from "@/lib/deck-emojis";
 import type { Category, Deck, Flashcard } from "@/types/api";
 
 function applyCardUpdates(cards: Flashcard[], updated: Flashcard[]): Flashcard[] {
@@ -440,6 +441,9 @@ export default function DeckDetailPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-3">
+            <span className="text-3xl" aria-hidden>
+              {deckEmoji(deck)}
+            </span>
             <h1 className="text-2xl font-bold sm:text-3xl">{deck.title}</h1>
             <StatusBadge status={deck.status} />
           </div>

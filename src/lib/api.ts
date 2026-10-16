@@ -4,6 +4,7 @@ import { isAuthTokenError } from "./session";
 import type {
   ApiError,
   CreateDeckBody,
+  UpdateDeckBody,
   CreateCategoryBody,
   CreateFlashcardBody,
   Category,
@@ -282,7 +283,7 @@ export const api = {
 
   async updateDeck(
     id: string,
-    body: Partial<CreateDeckBody>,
+    body: UpdateDeckBody,
     token: string,
   ): Promise<Deck> {
     const data = await request<DeckResponse>(

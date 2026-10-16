@@ -7,6 +7,7 @@ export interface Deck {
   status: ContentStatus;
   cardCount: number;
   updatedAt: string;
+  emoji?: string;
   order?: number;
 }
 
@@ -35,6 +36,13 @@ export interface Flashcard {
 export interface CreateDeckBody {
   title: string;
   description: string;
+  emoji: string;
+}
+
+export interface UpdateDeckBody {
+  title: string;
+  description: string;
+  emoji: string;
 }
 
 export interface CreateCategoryBody {

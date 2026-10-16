@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { deckEmoji } from "@/lib/deck-emojis";
 import type { Category, Deck, Flashcard } from "@/types/api";
 
 interface FlashcardPreviewProps {
@@ -86,6 +87,9 @@ export function FlashcardPreview({
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <h1 className="px-12 text-lg font-bold leading-snug text-foreground">
+          <span className="mr-1.5" aria-hidden>
+            {deckEmoji(deck)}
+          </span>
           {deck.title}
         </h1>
         <p className="mt-3 text-sm text-muted">

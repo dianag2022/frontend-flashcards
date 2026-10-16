@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { deckEmoji } from "@/lib/deck-emojis";
 import type { Deck } from "@/types/api";
 
 function AppContent() {
@@ -71,7 +72,12 @@ function AppContent() {
           <div className="space-y-4">
             {decks.map((deck) => (
               <Card key={deck.id} className="p-5">
-                <h3 className="font-semibold">{deck.title}</h3>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-xl" aria-hidden>
+                    {deckEmoji(deck)}
+                  </span>
+                  <h3 className="font-semibold">{deck.title}</h3>
+                </div>
                 <p className="mt-1 text-sm text-muted">{deck.description}</p>
                 <p className="mt-2 text-xs text-muted">
                   {deck.cardCount} tarjeta{deck.cardCount === 1 ? "" : "s"}

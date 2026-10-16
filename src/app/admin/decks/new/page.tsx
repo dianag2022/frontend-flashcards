@@ -10,7 +10,7 @@ export default function NewDeckPage() {
   const router = useRouter();
   const { token } = useAuth();
 
-  async function handleCreate(data: { title: string; description: string }) {
+  async function handleCreate(data: { title: string; description: string; emoji: string }) {
     if (!token) throw new Error("Sesión no válida.");
     const { deck } = await api.createDeck(data, token);
     router.push(`/admin/decks/${deck.id}`);
