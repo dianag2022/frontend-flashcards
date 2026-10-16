@@ -1,4 +1,4 @@
-import type { Category, Deck } from "@/types/api";
+import type { Category, Deck, Flashcard } from "@/types/api";
 
 export function sortDecksByOrder(decks: Deck[]): Deck[] {
   return [...decks].sort((a, b) => {
@@ -17,11 +17,21 @@ function timestamp(value?: string): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-export function sortCategoriesNewestFirst(categories: Category[]): Category[] {
-  return [...categories].sort((a, b) => {
-    const aTime = timestamp(a.createdAt ?? a.updatedAt);
-    const bTime = timestamp(b.createdAt ?? b.updatedAt);
+function newestFirst<T extends { id: string; updatedAt?: string; createdAt?: string }>(
+  items: T[],
+): T[] {
+  return [...items].sort((a, b) => {
+    const aTime = timestamp(a.updatedAt ?? a.createdAt);
+    const bTime = timestamp(b.updatedAt ?? b.createdAt);
     if (bTime !== aTime) return bTime - aTime;
     return b.id.localeCompare(a.id);
   });
+}
+
+export function sortCategoriesNewestFirst(categories: Category[]): Category[] {
+  return newestFirst(categories);
+}
+
+export function sortFlashcardsNewestFirst(cards: Flashcard[]): Flashcard[] {
+  return newestFirst(cards);
 }

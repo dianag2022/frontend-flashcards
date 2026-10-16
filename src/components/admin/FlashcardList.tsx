@@ -6,6 +6,7 @@ import { Eye, EyeOff, Pencil, Tag, Trash2, Upload } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { RichText } from "@/components/admin/RichText";
 import type { Flashcard } from "@/types/api";
 
 interface FlashcardListProps {
@@ -115,8 +116,26 @@ export function FlashcardList({
                     )}
                     <StatusBadge status={card.status} />
                   </div>
-                  <p className="text-sm font-semibold text-foreground">{card.front}</p>
-                  <p className="mt-1 text-sm text-muted">{card.back}</p>
+                  <div className="flex gap-3">
+                    {card.frontImageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={card.frontImageUrl}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <RichText
+                        html={card.front}
+                        className="line-clamp-2 text-sm font-semibold text-foreground"
+                      />
+                      <RichText
+                        html={card.back}
+                        className="mt-1 line-clamp-2 text-sm text-muted"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">

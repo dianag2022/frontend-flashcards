@@ -38,9 +38,23 @@ export default function EditCardPage() {
     loadCard();
   }, [loadCard]);
 
-  async function handleUpdate(data: { front: string; back: string }) {
+  async function handleUpdate(data: {
+    front: string;
+    back: string;
+    frontImageUrl?: string;
+    backImageUrl?: string;
+  }) {
     if (!token || !card) throw new Error("Tarjeta no encontrada.");
-    await api.updateFlashcard(card.id, data, token);
+    await api.updateFlashcard(
+      card.id,
+      {
+        front: data.front,
+        back: data.back,
+        frontImageUrl: data.frontImageUrl ?? null,
+        backImageUrl: data.backImageUrl ?? null,
+      },
+      token,
+    );
     router.push(`/admin/decks/${params.id}`);
   }
 
@@ -69,7 +83,12 @@ export default function EditCardPage() {
       <h1 className="mb-6 text-2xl font-bold">Editar tarjeta</h1>
       <Card className="p-6">
         <FlashcardForm
-          initial={{ front: card.front, back: card.back }}
+          initial={{
+            front: card.front,
+            back: card.back,
+            frontImageUrl: card.frontImageUrl ?? "",
+            backImageUrl: card.backImageUrl ?? "",
+          }}
           submitLabel="Guardar cambios"
           onSubmit={handleUpdate}
           onCancel={() => router.push(`/admin/decks/${params.id}`)}

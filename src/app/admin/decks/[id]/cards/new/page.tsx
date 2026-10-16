@@ -56,7 +56,12 @@ function NewCardContent() {
     loadCategories();
   }, [loadCategories]);
 
-  async function handleCreate(data: { front: string; back: string }) {
+  async function handleCreate(data: {
+    front: string;
+    back: string;
+    frontImageUrl?: string;
+    backImageUrl?: string;
+  }) {
     if (!token) throw new Error("Sesión no válida.");
     if (!categoryId) throw new Error("Selecciona una categoría.");
 

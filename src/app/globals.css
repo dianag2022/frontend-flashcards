@@ -144,3 +144,36 @@ body {
 .flip-card-back {
   transform: rotateY(180deg);
 }
+
+.rich-text p {
+  margin: 0.2em 0;
+}
+
+.rich-text ul,
+.rich-text ol {
+  margin: 0.35em 0;
+  padding-left: 1.25rem;
+  text-align: left;
+}
+
+.rich-text ul {
+  list-style: disc;
+}
+
+.rich-text ol {
+  list-style: decimal;
+}
+
+.rich-text li {
+  margin: 0.15em 0;
+}
+
+.rich-text strong,
+.rich-text b {
+  font-weight: 700;
+}
+
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+}

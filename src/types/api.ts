@@ -19,7 +19,6 @@ export interface Category {
   status: ContentStatus;
   cardCount: number;
   updatedAt: string;
-  createdAt?: string;
   color?: string;
   order?: number;
 }
@@ -31,7 +30,10 @@ export interface Flashcard {
   front: string;
   back: string;
   status: ContentStatus;
-  createdAt: string;
+  updatedAt?: string;
+  createdAt?: string;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
   order?: number;
 }
 
@@ -64,6 +66,51 @@ export interface CreateFlashcardBody {
   categoryId: string;
   front: string;
   back: string;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
+}
+
+export interface UpdateFlashcardBody {
+  front: string;
+  back: string;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
+}
+
+export interface UploadImageResponse {
+  url: string;
+  imageUrl?: string;
+}
+
+export interface GlossaryTerm {
+  id: string;
+  term: string;
+  definition: string;
+  updatedAt: string;
+}
+
+export interface GlossaryListResponse {
+  terms: GlossaryTerm[];
+}
+
+export interface GlossaryTermResponse {
+  term: GlossaryTerm;
+}
+
+export interface CreateGlossaryTermBody {
+  term: string;
+  definition: string;
+}
+
+export interface SendNotificationBody {
+  title: string;
+  body: string;
+  audience?: "all";
+}
+
+export interface SendNotificationResponse {
+  message: string;
+  sentCount?: number;
 }
 
 export interface SignInBody {

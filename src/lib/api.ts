@@ -1,7 +1,11 @@
 import { API_BASE_URL } from "./constants";
 import { refreshAuthToken } from "./auth-token";
 import { isAuthTokenError } from "./session";
-import { sortCategoriesNewestFirst, sortDecksByOrder } from "./content-order";
+import {
+  sortCategoriesNewestFirst,
+  sortDecksByOrder,
+  sortFlashcardsNewestFirst,
+} from "./content-order";
 import type {
   ApiError,
   CreateDeckBody,
@@ -9,6 +13,14 @@ import type {
   CreateCategoryBody,
   UpdateCategoryBody,
   CreateFlashcardBody,
+  UpdateFlashcardBody,
+  UploadImageResponse,
+  GlossaryTerm,
+  GlossaryListResponse,
+  GlossaryTermResponse,
+  CreateGlossaryTermBody,
+  SendNotificationBody,
+  SendNotificationResponse,
   Category,
   CategoryListResponse,
   CategoryResponse,
@@ -103,6 +115,57 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
+async function uploadFile(
+  path: string,
+  file: File,
+  token: string,
+  retried = false,
+): Promise<UploadImageResponse> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+  };
+  const body = new FormData();
+  body.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers,
+    body,
+  });
+
+  if (!response.ok) {
+    const message = await parseError(response);
+    if (response.status === 401 && !retried && isAuthTokenError(message)) {
+      const newToken = await refreshAuthToken();
+      if (newToken) return uploadFile(path, file, newToken, true);
+    }
+    throw new ApiClientError(response.status, message);
+  }
+
+  const data = (await response.json()) as UploadImageResponse & {
+    fileUrl?: string;
+    downloadUrl?: string;
+  };
+  const url = data.url || data.imageUrl || data.fileUrl || data.downloadUrl;
+  if (!url) {
+    throw new ApiClientError(500, "El servidor no devolvió la URL de la imagen.");
+  }
+  return { url, imageUrl: data.imageUrl ?? url };
+}
+
+function normalizeGlossaryList(
+  data: GlossaryListResponse & { glossary?: GlossaryTerm[] },
+): GlossaryListResponse {
+  return { terms: data.terms ?? data.glossary ?? [] };
+}
+
+function normalizeGlossaryTerm(
+  data: GlossaryTermResponse & Partial<GlossaryTerm>,
+): GlossaryTermResponse {
+  if (data.term?.id) return { term: data.term };
+  return { term: data as GlossaryTerm };
+}
+
 export const api = {
   signIn(body: SignInBody) {
     return request<SignInResponse>("/api/auth/sign-in", {
@@ -166,8 +229,11 @@ export const api = {
     return { decks: sortDecksByOrder(data.decks) };
   },
 
-  listPublishedFlashcards(deckId: string) {
-    return request<FlashcardListResponse>(`/api/decks/${deckId}/flashcards`);
+  async listPublishedFlashcards(deckId: string) {
+    const data = await request<FlashcardListResponse>(
+      `/api/decks/${deckId}/flashcards`,
+    );
+    return { flashcards: sortFlashcardsNewestFirst(data.flashcards) };
   },
 
   async listPublishedCategories(deckId: string) {
@@ -177,10 +243,11 @@ export const api = {
     return { categories: sortCategoriesNewestFirst(data.categories) };
   },
 
-  listPublishedFlashcardsByCategory(deckId: string, categoryId: string) {
-    return request<FlashcardListResponse>(
+  async listPublishedFlashcardsByCategory(deckId: string, categoryId: string) {
+    const data = await request<FlashcardListResponse>(
       `/api/decks/${deckId}/categories/${categoryId}/flashcards`,
     );
+    return { flashcards: sortFlashcardsNewestFirst(data.flashcards) };
   },
 
   createDeck(body: CreateDeckBody, token: string) {
@@ -337,7 +404,7 @@ export const api = {
       {},
       token,
     );
-    return data.flashcards;
+    return sortFlashcardsNewestFirst(data.flashcards);
   },
 
   publishFlashcards(deckId: string, flashcardIds: string[], token: string) {
@@ -358,9 +425,13 @@ export const api = {
     );
   },
 
+  uploadImage(file: File, token: string) {
+    return uploadFile("/api/admin/uploads", file, token);
+  },
+
   async updateFlashcard(
     id: string,
-    body: Partial<CreateFlashcardBody>,
+    body: UpdateFlashcardBody,
     token: string,
   ): Promise<Flashcard> {
     const data = await request<FlashcardResponse>(
@@ -375,6 +446,54 @@ export const api = {
     return request<DeleteFlashcardResponse>(
       `/api/admin/flashcards/${id}`,
       { method: "DELETE" },
+      token,
+    );
+  },
+
+  async listGlossary(token?: string | null) {
+    const data = await request<GlossaryListResponse>("/api/glossary", {}, token);
+    return normalizeGlossaryList(data);
+  },
+
+  async listAdminGlossary(token: string) {
+    const data = await request<GlossaryListResponse>(
+      "/api/admin/glossary",
+      {},
+      token,
+    );
+    return normalizeGlossaryList(data);
+  },
+
+  async createGlossaryTerm(body: CreateGlossaryTermBody, token: string) {
+    const data = await request<GlossaryTermResponse>(
+      "/api/admin/glossary",
+      { method: "POST", body: JSON.stringify(body) },
+      token,
+    );
+    return normalizeGlossaryTerm(data);
+  },
+
+  async updateGlossaryTerm(id: string, body: CreateGlossaryTermBody, token: string) {
+    const data = await request<GlossaryTermResponse>(
+      `/api/admin/glossary/${id}`,
+      { method: "PUT", body: JSON.stringify(body) },
+      token,
+    );
+    return normalizeGlossaryTerm(data);
+  },
+
+  deleteGlossaryTerm(id: string, token: string) {
+    return request<{ message: string; id: string }>(
+      `/api/admin/glossary/${id}`,
+      { method: "DELETE" },
+      token,
+    );
+  },
+
+  sendNotification(body: SendNotificationBody, token: string) {
+    return request<SendNotificationResponse>(
+      "/api/admin/notifications",
+      { method: "POST", body: JSON.stringify(body) },
       token,
     );
   },

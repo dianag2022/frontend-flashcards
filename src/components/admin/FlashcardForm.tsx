@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import { ImageField } from "@/components/admin/ImageField";
+import { isRichTextEmpty } from "@/lib/rich-text";
 
-interface FlashcardFormData {
+export interface FlashcardFormData {
   front: string;
   back: string;
+  frontImageUrl?: string;
+  backImageUrl?: string;
 }
 
 interface FlashcardFormProps {
@@ -25,19 +28,26 @@ export function FlashcardForm({
 }: FlashcardFormProps) {
   const [front, setFront] = useState(initial.front);
   const [back, setBack] = useState(initial.back);
+  const [frontImageUrl, setFrontImageUrl] = useState(initial.frontImageUrl ?? "");
+  const [backImageUrl, setBackImageUrl] = useState(initial.backImageUrl ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!front.trim() || !back.trim()) {
+    if (isRichTextEmpty(front) || isRichTextEmpty(back)) {
       setError("Completa el frente y el reverso de la tarjeta.");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await onSubmit({ front: front.trim(), back: back.trim() });
+      await onSubmit({
+        front,
+        back,
+        frontImageUrl: frontImageUrl || undefined,
+        backImageUrl: backImageUrl || undefined,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar la tarjeta.");
     } finally {
@@ -47,19 +57,27 @@ export function FlashcardForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <Input
+      <RichTextEditor
         label="Frente (pregunta / término)"
         value={front}
-        onChange={(e) => setFront(e.target.value)}
+        onChange={setFront}
         placeholder="¿Qué es la memoria de trabajo?"
-        required
       />
-      <Textarea
+      <ImageField
+        label="Imagen del frente (opcional)"
+        value={frontImageUrl}
+        onChange={setFrontImageUrl}
+      />
+      <RichTextEditor
         label="Reverso (respuesta / definición)"
         value={back}
-        onChange={(e) => setBack(e.target.value)}
+        onChange={setBack}
         placeholder="Sistema de capacidad limitada para almacenamiento temporal..."
-        required
+      />
+      <ImageField
+        label="Imagen del reverso (opcional)"
+        value={backImageUrl}
+        onChange={setBackImageUrl}
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-3">

@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { deckEmoji } from "@/lib/deck-emojis";
+import { RichText } from "@/components/admin/RichText";
 import type { Category, Deck, Flashcard } from "@/types/api";
 
 interface FlashcardPreviewProps {
@@ -143,9 +144,20 @@ export function FlashcardPreview({
                   </span>
                 )}
               </div>
-              <p className="my-auto px-2 text-center text-lg font-bold leading-relaxed text-foreground">
-                {current.front}
-              </p>
+              <div className="my-auto flex flex-col items-center gap-3 px-2">
+                {current.frontImageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={current.frontImageUrl}
+                    alt=""
+                    className="max-h-40 rounded-xl object-contain"
+                  />
+                )}
+                <RichText
+                  html={current.front}
+                  className="text-center text-lg font-bold leading-relaxed text-foreground"
+                />
+              </div>
               <span className="text-center text-xs text-transparent">.</span>
             </Card>
 
@@ -155,9 +167,20 @@ export function FlashcardPreview({
                   RESPUESTA
                 </span>
               </div>
-              <p className="my-auto px-2 text-center text-base leading-relaxed text-foreground">
-                {current.back}
-              </p>
+              <div className="my-auto flex flex-col items-center gap-3 px-2">
+                {current.backImageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={current.backImageUrl}
+                    alt=""
+                    className="max-h-40 rounded-xl object-contain"
+                  />
+                )}
+                <RichText
+                  html={current.back}
+                  className="text-center text-base leading-relaxed text-foreground"
+                />
+              </div>
               <span className="text-center text-xs text-transparent">.</span>
             </Card>
           </div>
