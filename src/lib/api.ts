@@ -1,11 +1,13 @@
 import { API_BASE_URL } from "./constants";
 import { refreshAuthToken } from "./auth-token";
 import { isAuthTokenError } from "./session";
+import { sortCategoriesNewestFirst, sortDecksByOrder } from "./content-order";
 import type {
   ApiError,
   CreateDeckBody,
   UpdateDeckBody,
   CreateCategoryBody,
+  UpdateCategoryBody,
   CreateFlashcardBody,
   Category,
   CategoryListResponse,
@@ -159,16 +161,20 @@ export const api = {
     });
   },
 
-  listPublishedDecks() {
-    return request<DeckListResponse>("/api/decks");
+  async listPublishedDecks() {
+    const data = await request<DeckListResponse>("/api/decks");
+    return { decks: sortDecksByOrder(data.decks) };
   },
 
   listPublishedFlashcards(deckId: string) {
     return request<FlashcardListResponse>(`/api/decks/${deckId}/flashcards`);
   },
 
-  listPublishedCategories(deckId: string) {
-    return request<CategoryListResponse>(`/api/decks/${deckId}/categories`);
+  async listPublishedCategories(deckId: string) {
+    const data = await request<CategoryListResponse>(
+      `/api/decks/${deckId}/categories`,
+    );
+    return { categories: sortCategoriesNewestFirst(data.categories) };
   },
 
   listPublishedFlashcardsByCategory(deckId: string, categoryId: string) {
@@ -209,12 +215,13 @@ export const api = {
     );
   },
 
-  listAdminCategories(deckId: string, token: string) {
-    return request<CategoryListResponse>(
+  async listAdminCategories(deckId: string, token: string) {
+    const data = await request<CategoryListResponse>(
       `/api/admin/decks/${deckId}/categories`,
       {},
       token,
     );
+    return { categories: sortCategoriesNewestFirst(data.categories) };
   },
 
   createCategory(deckId: string, body: CreateCategoryBody, token: string) {
@@ -223,6 +230,20 @@ export const api = {
       { method: "POST", body: JSON.stringify(body) },
       token,
     );
+  },
+
+  async updateCategory(
+    deckId: string,
+    categoryId: string,
+    body: UpdateCategoryBody,
+    token: string,
+  ): Promise<Category> {
+    const data = await request<CategoryResponse>(
+      `/api/admin/decks/${deckId}/categories/${categoryId}`,
+      { method: "PUT", body: JSON.stringify(body) },
+      token,
+    );
+    return data.category;
   },
 
   deleteCategory(deckId: string, categoryId: string, token: string) {
@@ -256,7 +277,7 @@ export const api = {
       {},
       token,
     );
-    return data.decks;
+    return sortDecksByOrder(data.decks);
   },
 
   async getAdminDeck(id: string, token: string): Promise<Deck> {
@@ -302,22 +323,12 @@ export const api = {
     );
   },
 
-  async reorderDecks(
-    orderedIds: string[],
-    token: string,
-  ): Promise<void> {
-    try {
-      await request<void>(
-        "/api/admin/decks/reorder",
-        { method: "PUT", body: JSON.stringify({ orderedIds }) },
-        token,
-      );
-    } catch (error) {
-      if (error instanceof ApiClientError && [404, 405].includes(error.status)) {
-        return;
-      }
-      throw error;
-    }
+  reorderDecks(orderedIds: string[], token: string) {
+    return request<void>(
+      "/api/admin/decks/reorder",
+      { method: "PUT", body: JSON.stringify({ orderedIds }) },
+      token,
+    );
   },
 
   async listAdminFlashcards(deckId: string, token: string): Promise<Flashcard[]> {

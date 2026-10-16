@@ -1,46 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { EyeOff, FolderOpen, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  EyeOff,
+  FolderOpen,
+  Plus,
+  Sparkles,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { FlashcardList } from "@/components/admin/FlashcardList";
+import { ColorPicker } from "@/components/admin/ColorPicker";
 import { countByStatus, isDraftStatus } from "@/lib/deck-status";
+import { categoryColor, withAlpha } from "@/lib/category-colors";
 import type { Category, Flashcard } from "@/types/api";
-
-const CATEGORY_ACCENTS = [
-  {
-    bar: "border-l-brand-teal",
-    chip: "bg-brand-teal/10 text-brand-teal",
-    header: "from-brand-teal/10 to-transparent",
-  },
-  {
-    bar: "border-l-brand-blue",
-    chip: "bg-brand-blue/10 text-brand-blue",
-    header: "from-brand-blue/10 to-transparent",
-  },
-  {
-    bar: "border-l-brand-purple",
-    chip: "bg-brand-purple/10 text-brand-purple",
-    header: "from-brand-purple/10 to-transparent",
-  },
-  {
-    bar: "border-l-brand-link",
-    chip: "bg-brand-link/10 text-brand-link",
-    header: "from-brand-link/10 to-transparent",
-  },
-] as const;
-
-function accentFor(id: string) {
-  const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return CATEGORY_ACCENTS[index % CATEGORY_ACCENTS.length];
-}
 
 interface CategorySectionProps {
   category: Category;
   deckId: string;
   cards: Flashcard[];
   selectedIds: Set<string>;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
   onPublishCard: (id: string) => Promise<void>;
@@ -49,6 +34,7 @@ interface CategorySectionProps {
   onDeleteCategory: (id: string) => Promise<void>;
   onPublishCategory: (id: string) => Promise<void>;
   onDraftCategory: (id: string) => Promise<void>;
+  onChangeColor: (id: string, color: string) => Promise<void>;
   busyId?: string | null;
   deleting?: boolean;
   publishing?: boolean;
@@ -60,6 +46,8 @@ export function CategorySection({
   deckId,
   cards,
   selectedIds,
+  collapsed,
+  onToggleCollapse,
   onToggleSelect,
   onToggleSelectAll,
   onPublishCard,
@@ -68,39 +56,57 @@ export function CategorySection({
   onDeleteCategory,
   onPublishCategory,
   onDraftCategory,
+  onChangeColor,
   busyId,
   deleting,
   publishing,
   drafting,
 }: CategorySectionProps) {
   const counts = countByStatus(cards);
-  const accent = accentFor(category.id);
+  const color = categoryColor(category);
   const isDraft = isDraftStatus(category.status);
   const categoryBusy = Boolean(deleting || publishing || drafting);
 
   return (
     <section
       id={`category-${category.id}`}
-      className={`scroll-mt-6 overflow-hidden rounded-2xl border border-border bg-card card-shadow border-l-4 ${accent.bar}`}
+      className="scroll-mt-6 overflow-hidden rounded-2xl border border-border bg-card card-shadow border-l-4"
+      style={{ borderLeftColor: color }}
     >
-      <div className={`bg-gradient-to-r ${accent.header} p-4 sm:p-5`}>
+      <div
+        className="p-4 sm:p-5"
+        style={{
+          background: `linear-gradient(to right, ${withAlpha(color, 0.12)}, transparent)`,
+        }}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="min-w-0 flex-1 text-left"
+            aria-expanded={!collapsed}
+          >
             <div className="mb-1 flex flex-wrap items-center gap-2">
-              <FolderOpen className="h-5 w-5 shrink-0 text-muted" />
+              {collapsed ? (
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
+              ) : (
+                <ChevronDown className="h-5 w-5 shrink-0 text-muted" />
+              )}
+              <FolderOpen className="h-5 w-5 shrink-0" style={{ color }} />
               <h2 className="text-lg font-semibold">{category.title}</h2>
               <StatusBadge status={category.status} />
             </div>
             {category.description && (
-              <p className="text-sm text-muted">{category.description}</p>
+              <p className="pl-7 text-sm text-muted">{category.description}</p>
             )}
-            <p className="mt-1.5 text-xs text-muted">
+            <p className="mt-1.5 pl-7 text-xs text-muted">
               {counts.total} tarjeta{counts.total === 1 ? "" : "s"} ·{" "}
               {counts.published} publicada{counts.published === 1 ? "" : "s"} ·{" "}
               {counts.draft} borrador{counts.draft === 1 ? "" : "es"}
+              {collapsed ? " · Pulsa para ver tarjetas" : ""}
             </p>
-          </div>
-          <div className="flex items-center gap-1">
+          </button>
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <Link
               href={`/admin/decks/${deckId}/cards/new?categoryId=${category.id}`}
               title="Nueva tarjeta"
@@ -150,23 +156,36 @@ export function CategorySection({
         </div>
       </div>
 
-      <div className="border-t border-border bg-background/70 p-3 sm:p-4">
-        <FlashcardList
-          cards={cards}
-          deckId={deckId}
-          selectedIds={selectedIds}
-          onToggleSelect={onToggleSelect}
-          onToggleSelectAll={onToggleSelectAll}
-          onPublishCard={onPublishCard}
-          onDraftCard={onDraftCard}
-          onDelete={onDelete}
-          busyId={busyId}
-          nested
-          categoryLabel={category.title}
-          categoryChipClass={accent.chip}
-          emptyMessage="No hay tarjetas en esta categoría."
-        />
-      </div>
+      {!collapsed && (
+        <div className="border-t border-border bg-background/70 p-3 sm:p-4">
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-medium text-muted">Color del subtema</p>
+            <ColorPicker
+              compact
+              value={color}
+              onChange={(next) => onChangeColor(category.id, next)}
+            />
+          </div>
+          <FlashcardList
+            cards={cards}
+            deckId={deckId}
+            selectedIds={selectedIds}
+            onToggleSelect={onToggleSelect}
+            onToggleSelectAll={onToggleSelectAll}
+            onPublishCard={onPublishCard}
+            onDraftCard={onDraftCard}
+            onDelete={onDelete}
+            busyId={busyId}
+            nested
+            categoryLabel={category.title}
+            categoryChipStyle={{
+              backgroundColor: withAlpha(color, 0.12),
+              color,
+            }}
+            emptyMessage="No hay tarjetas en esta categoría."
+          />
+        </div>
+      )}
     </section>
   );
 }

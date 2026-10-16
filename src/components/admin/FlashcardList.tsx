@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, Pencil, Tag, Trash2, Upload } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -21,6 +22,7 @@ interface FlashcardListProps {
   nested?: boolean;
   categoryLabel?: string;
   categoryChipClass?: string;
+  categoryChipStyle?: CSSProperties;
 }
 
 export function FlashcardList({
@@ -37,6 +39,7 @@ export function FlashcardList({
   nested = false,
   categoryLabel,
   categoryChipClass = "bg-brand-teal/10 text-brand-teal",
+  categoryChipStyle,
 }: FlashcardListProps) {
   if (cards.length === 0) {
     if (nested) {
@@ -101,7 +104,10 @@ export function FlashcardList({
                   <div className="mb-1.5 flex flex-wrap items-center gap-2">
                     {categoryLabel && (
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${categoryChipClass}`}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          categoryChipStyle ? "" : categoryChipClass
+                        }`}
+                        style={categoryChipStyle}
                       >
                         <Tag className="h-3 w-3" />
                         {categoryLabel}

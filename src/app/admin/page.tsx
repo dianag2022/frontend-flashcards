@@ -59,8 +59,14 @@ function DecksPageContent() {
     if (!token) return;
     try {
       await api.reorderDecks(orderedIds, token);
-    } catch {
+      setPublishMessage("Orden guardado. Así se verán los temas en la app móvil.");
+    } catch (err) {
       await loadDecks();
+      setPublishMessage(
+        err instanceof Error
+          ? err.message
+          : "No se pudo guardar el orden. El backend debe implementar PUT /api/admin/decks/reorder.",
+      );
     }
   }
 
@@ -110,7 +116,8 @@ function DecksPageContent() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Selecciona un tema</h1>
           <p className="mt-2 text-muted">
-            ¿Qué área de la psicología gestionarás hoy?
+            ¿Qué área de la psicología gestionarás hoy? Arrastra los temas para
+            definir el orden en la app móvil.
           </p>
         </div>
         <Link href="/admin/decks/new">

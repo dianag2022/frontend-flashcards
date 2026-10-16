@@ -19,6 +19,8 @@ export interface Category {
   status: ContentStatus;
   cardCount: number;
   updatedAt: string;
+  createdAt?: string;
+  color?: string;
   order?: number;
 }
 
@@ -48,6 +50,13 @@ export interface UpdateDeckBody {
 export interface CreateCategoryBody {
   title: string;
   description: string;
+  color: string;
+}
+
+export interface UpdateCategoryBody {
+  title: string;
+  description: string;
+  color: string;
 }
 
 export interface CreateFlashcardBody {

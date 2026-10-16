@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Eye, FolderPlus, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronsDown, ChevronsUp, Eye, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { IconButton, iconLinkClass } from "@/components/ui/IconButton";
@@ -19,6 +19,8 @@ import { useConfirm } from "@/contexts/ConfirmContext";
 import { api } from "@/lib/api";
 import { countByStatus, isDraftDeck } from "@/lib/deck-status";
 import { deckEmoji } from "@/lib/deck-emojis";
+import { sortCategoriesNewestFirst } from "@/lib/content-order";
+import { categoryColor, withAlpha } from "@/lib/category-colors";
 import type { Category, Deck, Flashcard } from "@/types/api";
 
 function applyCardUpdates(cards: Flashcard[], updated: Flashcard[]): Flashcard[] {
@@ -49,6 +51,7 @@ export default function DeckDetailPage() {
     "delete" | "publish" | "draft" | null
   >(null);
   const [message, setMessage] = useState("");
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {
     if (!token || !deckId) return;
@@ -61,8 +64,14 @@ export default function DeckDetailPage() {
         api.listAdminFlashcards(deckId, token),
       ]);
       setDeck(deckData);
-      setCategories(categoriesRes.categories);
+      const sorted = sortCategoriesNewestFirst(categoriesRes.categories);
+      setCategories(sorted);
       setCards(remoteCards);
+      if (sorted.length > 1) {
+        setCollapsedIds(new Set(sorted.map((c) => c.id)));
+      } else {
+        setCollapsedIds(new Set());
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Error al cargar el deck.");
       setDeck(null);
@@ -121,7 +130,7 @@ export default function DeckDetailPage() {
         api.listAdminCategories(deck.id, token),
         api.listAdminFlashcards(deck.id, token),
       ]);
-      setCategories(categoriesRes.categories);
+      setCategories(sortCategoriesNewestFirst(categoriesRes.categories));
       setCards(remoteCards);
       setSelectedIds(new Set());
 
@@ -308,7 +317,7 @@ export default function DeckDetailPage() {
         );
       } else {
         const categoriesRes = await api.listAdminCategories(deck.id, token);
-        setCategories(categoriesRes.categories);
+        setCategories(sortCategoriesNewestFirst(categoriesRes.categories));
       }
       if (result.flashcards?.length) {
         setCards((prev) => applyCardUpdates(prev, result.flashcards ?? []));
@@ -353,7 +362,7 @@ export default function DeckDetailPage() {
         );
       } else {
         const categoriesRes = await api.listAdminCategories(deck.id, token);
-        setCategories(categoriesRes.categories);
+        setCategories(sortCategoriesNewestFirst(categoriesRes.categories));
       }
       if (result.flashcards?.length) {
         setCards((prev) => applyCardUpdates(prev, result.flashcards ?? []));
@@ -399,7 +408,7 @@ export default function DeckDetailPage() {
         return next;
       });
       const categoriesRes = await api.listAdminCategories(deckId, token);
-      setCategories(categoriesRes.categories);
+      setCategories(sortCategoriesNewestFirst(categoriesRes.categories));
       const deckData = await api.getAdminDeck(deck.id, token);
       setDeck(deckData);
       setMessage(message);
@@ -407,6 +416,52 @@ export default function DeckDetailPage() {
       setMessage(err instanceof Error ? err.message : "Error al eliminar tarjeta.");
     } finally {
       setBusyCardId(null);
+    }
+  }
+
+  function toggleCollapse(categoryId: string) {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  }
+
+  function collapseAll() {
+    setCollapsedIds(new Set(categories.map((c) => c.id)));
+  }
+
+  function expandAll() {
+    setCollapsedIds(new Set());
+  }
+
+  async function handleChangeColor(categoryId: string, color: string) {
+    if (!token || !deck) return;
+    const category = categories.find((c) => c.id === categoryId);
+    if (!category) return;
+
+    const previous = category.color;
+    setCategories((prev) =>
+      prev.map((c) => (c.id === categoryId ? { ...c, color } : c)),
+    );
+    try {
+      const updated = await api.updateCategory(
+        deck.id,
+        categoryId,
+        { title: category.title, description: category.description, color },
+        token,
+      );
+      setCategories((prev) =>
+        prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
+      );
+    } catch (err) {
+      setCategories((prev) =>
+        prev.map((c) => (c.id === categoryId ? { ...c, color: previous } : c)),
+      );
+      setMessage(
+        err instanceof Error ? err.message : "Error al guardar el color de la categoría.",
+      );
     }
   }
 
@@ -518,24 +573,61 @@ export default function DeckDetailPage() {
         </Card>
       )}
 
-      {categories.length > 1 && (
-        <nav className="mb-4 flex flex-wrap gap-2" aria-label="Categorías del deck">
-          {categories.map((category) => {
-            const count = cards.filter((c) => c.categoryId === category.id).length;
-            return (
-              <a
-                key={category.id}
-                href={`#category-${category.id}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-muted transition hover:border-brand-teal/40 hover:text-foreground"
+      {categories.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <nav className="flex flex-wrap gap-2" aria-label="Categorías del deck">
+            {categories.map((category) => {
+              const count = cards.filter((c) => c.categoryId === category.id).length;
+              const color = categoryColor(category);
+              return (
+                <a
+                  key={category.id}
+                  href={`#category-${category.id}`}
+                  onClick={() =>
+                    setCollapsedIds((prev) => {
+                      const next = new Set(prev);
+                      next.delete(category.id);
+                      return next;
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition"
+                  style={{
+                    borderColor: withAlpha(color, 0.35),
+                    backgroundColor: withAlpha(color, 0.12),
+                    color,
+                  }}
+                >
+                  {category.title}
+                  <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px]">
+                    {count}
+                  </span>
+                </a>
+              );
+            })}
+          </nav>
+          {categories.length > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                className="px-3 py-2"
+                onClick={expandAll}
               >
-                {category.title}
-                <span className="rounded-full bg-background px-1.5 py-0.5 text-[10px] text-muted">
-                  {count}
-                </span>
-              </a>
-            );
-          })}
-        </nav>
+                <ChevronsDown className="h-4 w-4" />
+                Expandir
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="px-3 py-2"
+                onClick={collapseAll}
+              >
+                <ChevronsUp className="h-4 w-4" />
+                Contraer
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       <FlashcardBulkActions
@@ -572,6 +664,8 @@ export default function DeckDetailPage() {
               deckId={deck.id}
               cards={categoryCards}
               selectedIds={selectedIds}
+              collapsed={collapsedIds.has(category.id)}
+              onToggleCollapse={() => toggleCollapse(category.id)}
               onToggleSelect={handleToggleSelect}
               onToggleSelectAll={() => handleToggleSelectAllInCategory(categoryCards)}
               onPublishCard={handlePublishCard}
@@ -580,6 +674,7 @@ export default function DeckDetailPage() {
               onDeleteCategory={handleDeleteCategory}
               onPublishCategory={handlePublishCategory}
               onDraftCategory={handleDraftCategory}
+              onChangeColor={handleChangeColor}
               busyId={busyCardId}
               deleting={busyCategoryId === category.id && categoryBusyKind === "delete"}
               publishing={busyCategoryId === category.id && categoryBusyKind === "publish"}

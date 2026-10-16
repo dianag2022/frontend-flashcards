@@ -14,7 +14,7 @@ export default function NewCategoryPage() {
   const { token } = useAuth();
   const deckId = params.id;
 
-  async function handleCreate(data: { title: string; description: string }) {
+  async function handleCreate(data: { title: string; description: string; color: string }) {
     if (!token) throw new Error("Sesión no válida.");
     await api.createCategory(deckId, data, token);
     router.push(`/admin/decks/${deckId}`);
