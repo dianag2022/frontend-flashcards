@@ -159,10 +159,15 @@ function normalizeGlossaryList(
   return { terms: data.terms ?? data.glossary ?? [] };
 }
 
-function normalizeGlossaryTerm(
-  data: GlossaryTermResponse & Partial<GlossaryTerm>,
-): GlossaryTermResponse {
-  if (data.term?.id) return { term: data.term };
+function normalizeGlossaryTerm(data: unknown): GlossaryTermResponse {
+  const payload = data as {
+    term?: GlossaryTerm;
+    id?: string;
+    definition?: string;
+  };
+  if (payload.term && typeof payload.term === "object" && payload.term.id) {
+    return { term: payload.term };
+  }
   return { term: data as GlossaryTerm };
 }
 
