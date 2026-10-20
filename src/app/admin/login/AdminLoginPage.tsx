@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { Logo } from "@/components/Logo";
 import { AuthHeader } from "@/components/AuthHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";

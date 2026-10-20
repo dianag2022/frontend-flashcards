@@ -105,6 +105,12 @@ export function CategorySection({
               {counts.draft} borrador{counts.draft === 1 ? "" : "es"}
               {collapsed ? " · Pulsa para ver tarjetas" : ""}
             </p>
+            {isDraft && counts.published > 0 && (
+              <p className="mt-2 pl-7 text-xs font-medium text-amber-800">
+                Hay tarjetas publicadas, pero el subtema sigue en borrador. La app no
+                puede abrirlo hasta que publiques la categoría.
+              </p>
+            )}
           </button>
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <Link

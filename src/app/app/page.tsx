@@ -37,7 +37,7 @@ function AppContent() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-          <Logo size="sm" />
+          <Logo size="sm" variant="mark" />
           <div className="flex items-center gap-4">
             {user && <UserMenu email={user.email} profileHref="/app/profile" />}
             <Button variant="ghost" onClick={() => signOut("/login")} className="px-3 py-2">

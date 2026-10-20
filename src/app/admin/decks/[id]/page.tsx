@@ -17,7 +17,7 @@ import { PageLoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { api } from "@/lib/api";
-import { countByStatus, isDraftDeck } from "@/lib/deck-status";
+import { countByStatus, isDraftDeck, isDraftStatus } from "@/lib/deck-status";
 import { deckEmoji } from "@/lib/deck-emojis";
 import { sortCategoriesNewestFirst } from "@/lib/content-order";
 import { categoryColor, withAlpha } from "@/lib/category-colors";
@@ -151,11 +151,53 @@ export default function DeckDetailPage() {
     setMessage("");
     try {
       const { flashcards } = await api.publishFlashcards(deck.id, ids, token);
-      setCards((prev) => applyCardUpdates(prev, flashcards));
+      let nextCards = applyCardUpdates(cards, flashcards);
+      setCards(nextCards);
       setSelectedIds(new Set());
-      setMessage(
-        `${flashcards.length} tarjeta${flashcards.length === 1 ? "" : "s"} publicada${flashcards.length === 1 ? "" : "s"}.`,
+
+      const publishedCategoryIds = new Set(
+        flashcards.map((card) => card.categoryId).filter(Boolean),
       );
+      const draftParents = categories.filter(
+        (category) =>
+          publishedCategoryIds.has(category.id) && isDraftStatus(category.status),
+      );
+
+      if (draftParents.length === 0) {
+        setMessage(
+          `${flashcards.length} tarjeta${flashcards.length === 1 ? "" : "s"} publicada${flashcards.length === 1 ? "" : "s"}.`,
+        );
+        return;
+      }
+
+      let nextCategories = categories;
+      const publishedCategoryTitles: string[] = [];
+      try {
+        for (const category of draftParents) {
+          const result = await api.publishCategory(deck.id, category.id, token);
+          if (result.category) {
+            nextCategories = nextCategories.map((item) =>
+              item.id === result.category.id ? result.category : item,
+            );
+            publishedCategoryTitles.push(result.category.title);
+          } else {
+            publishedCategoryTitles.push(category.title);
+          }
+          if (result.flashcards?.length) {
+            nextCards = applyCardUpdates(nextCards, result.flashcards);
+          }
+        }
+        setCards(nextCards);
+        setCategories(nextCategories);
+        setMessage(
+          `${flashcards.length} tarjeta${flashcards.length === 1 ? "" : "s"} publicada${flashcards.length === 1 ? "" : "s"}. También se publicó ${publishedCategoryTitles.length === 1 ? "la categoría" : "las categorías"} ${publishedCategoryTitles.map((title) => `"${title}"`).join(", ")} para que la app pueda abrir el subtema.`,
+        );
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : "Error al publicar la categoría.";
+        setMessage(
+          `${flashcards.length} tarjeta${flashcards.length === 1 ? "" : "s"} publicada${flashcards.length === 1 ? "" : "s"}, pero la categoría sigue en borrador. Publícala o la app no podrá abrir el subtema. ${detail}`,
+        );
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Error al publicar tarjetas.");
     } finally {

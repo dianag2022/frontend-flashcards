@@ -23,7 +23,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <header className="border-b border-border bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/admin">
-            <Logo size="sm" />
+            <Logo size="sm" variant="mark" />
           </Link>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <Link

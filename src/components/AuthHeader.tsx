@@ -9,7 +9,7 @@ export function AuthHeader({
 }) {
   return (
     <div className="mb-8 flex flex-col items-center text-center">
-      <Logo size="lg" />
+      <Logo size="lg" variant="mark" />
       {subtitle && <p className="mt-4 text-sm text-muted">{subtitle}</p>}
       {panelNote && <p className="mt-1 text-xs text-muted">{panelNote}</p>}
     </div>

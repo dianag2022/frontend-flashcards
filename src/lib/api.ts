@@ -57,10 +57,20 @@ class ApiClientError extends Error {
   }
 }
 
+function humanizeApiMessage(message: string): string {
+  if (/^Published category not found/i.test(message)) {
+    return "Esta categoría no está publicada. Publícala para que la app pueda mostrar sus tarjetas.";
+  }
+  if (/^Published deck not found/i.test(message)) {
+    return "Este deck no está publicado.";
+  }
+  return message;
+}
+
 async function parseError(response: Response): Promise<string> {
   try {
     const data = (await response.json()) as ApiError;
-    return data.message || data.error || response.statusText;
+    return humanizeApiMessage(data.message || data.error || response.statusText);
   } catch {
     return response.statusText;
   }

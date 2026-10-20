@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   description: "Panel de administración para flashcards de psicología",
   robots: { index: false, follow: false },
   icons: {
-    icon: "/logoRepaso.svg",
-    apple: "/logoRepaso.svg",
+    icon: "/unnamed.png",
+    apple: "/unnamed.png",
   },
 };
 
